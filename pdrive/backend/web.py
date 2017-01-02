@@ -151,8 +151,6 @@ if __name__ == '__main__':
 
 # =======================================
 
-
-
 # register additional static paths
 # blueprint = Blueprint('site', __name__, static_url_path='/static/site', static_folder='path/to/files')
 # app.register_blueprint(blueprint)
