@@ -19,7 +19,7 @@ You can run pdrive by calling the `pdrive` command within a directory you want e
 If you're running this on a remote server, you can use port forwarding to access the web interface over an ssh connection:
 
 ```
-ssh -N -L 9999:localhost:9999 <host>
+ssh -N -L 9999:localhost:9999 your@host.com
 ```
 
 ### usage
