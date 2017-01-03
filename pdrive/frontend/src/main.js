@@ -8,14 +8,9 @@ import 'element-ui/lib/theme-default/index.css'
 
 
 Vue.use(ElementUI);
-Vue.directive('elfocus', {
-    bind: function (el) {
-        Vue.nextTick(function() {
-            el.getElementsByTagName("input")[0].focus();
-        });
-    }
-});
-new Vue({ // eslint-disable-line no-new
+new Vue({
   el: '#app',
-  render: (h) => h(App)
+  render: function(h) {
+      return <App></App>;
+  }
 })
