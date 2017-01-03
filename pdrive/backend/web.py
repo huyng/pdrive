@@ -49,9 +49,6 @@ def api():
         elif payload["command"] == "ls":
             path = payload["path"]
             nodes = [process(pth.join(path, n)) for n in os.listdir(path)]
-            nodes_dirs = sorted((n for n in nodes if n["type"] == "dir"), key=lambda n: n['name'])
-            nodes_files = sorted((n for n in nodes if n["type"] == "file"), key=lambda n: n['name'])
-            nodes = nodes_dirs + nodes_files
             data = {
                 "basedir": basedir,
                 "cwd": path,
@@ -142,34 +139,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
-
-# =======================================
-
-# register additional static paths
-# blueprint = Blueprint('site', __name__, static_url_path='/static/site', static_folder='path/to/files')
-# app.register_blueprint(blueprint)
-
-# safely send file with user generated string
-# @app.route("/photos/fname.jpg")
-# def photo_files(fname):
-#     return send_from_directory(dpath, fname)
-
-# send  any file
-# @app.route("/photos/fname.jpg")
-# def photo_files(fname):
-#     return send_file(fname)
-
-# @app.route("/images/view/")
-# def image_view():
-#     img_id = request.args.get("img_id").strip()
-#     print img_id
-#     rec = rdd.lookup(img_id)
-#     response = make_response(rec[0].decode("base64"))
-#     response.headers['Content-Type'] = 'image/jpeg'
-#     return response
