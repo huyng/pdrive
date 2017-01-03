@@ -28,9 +28,6 @@ def api():
     payload = request.form.get("payload")
     if payload is None:
         nodes = [process(pth.join(basedir, n)) for n in os.listdir(basedir)]
-        nodes_dirs = sorted((n for n in nodes if n["type"] == "dir"), key=lambda n: n['name'])
-        nodes_files = sorted((n for n in nodes if n["type"] == "file"), key=lambda n: n['name'])
-        nodes = nodes_dirs + nodes_files
         data = {
             "basedir": basedir,
             "cwd": basedir,
