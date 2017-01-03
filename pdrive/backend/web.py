@@ -12,7 +12,7 @@ from flask import render_template
 from flask import send_file
 from flask import send_from_directory
 
-frontend_path = pth.join(pth.split(pth.split(__file__)[0])[0], "frontend")
+frontend_path = pth.join(pth.split(pth.split(pth.abspath(__file__))[0])[0], "frontend")
 
 app = Flask(__name__,
             static_folder=pth.join(frontend_path, "dist"),
