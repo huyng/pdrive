@@ -2,7 +2,7 @@
 
 pdrive is a browser-based document and file manager based on Python 3 and vue.js. If you need a quick way of browsing files on a remote server, this is the tool for you.
 
-You can use it as a pretty alternative to `python -m http.server`, or as simple interface into a remote network-attached-storage unit. It's designed to combine the excellent usability of Google Drive with the benefits of having control over your own data.
+You can use it as a pretty alternative to `python -m http.server` or as simple interface into a remote network-attached-storage unit. It's designed to combine the excellent usability of Google Drive with the benefits of having control over your own data.
 
 ![in mov](https://cloud.githubusercontent.com/assets/121183/21594148/018e5c90-d0d4-11e6-9464-74737d860b0b.gif)
 
