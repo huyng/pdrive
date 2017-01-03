@@ -22,6 +22,8 @@ If you're running this on a remote server, you can use port forwarding to access
 ssh -N -L 9999:localhost:9999 your@host.com
 ```
 
+PLEASE NOTE: pdrive will have all the same permissions to modify your file system as the user running the program.
+
 ### usage
 
 ```
