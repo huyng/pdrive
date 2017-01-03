@@ -1,6 +1,6 @@
-# ui
+# frontend ui
 
-> A Vue.js project
+This is the frontend ui based on [vue.js 2.0](https://vuejs.org/)
 
 ## Build Setup
 
@@ -8,17 +8,10 @@
 # install dependencies
 npm install
 
-# serve with hot reload at localhost:8080
-npm run dev
-
-# build for production with minification
+# build concatenate and compress your js/css files to dist/build.js
 npm run build
 
-# lint all *.js and *.vue files
-npm run lint
+# this watches for file changes in this dir and automatically recompiles
+npm run watch
 
-# run unit tests
-npm test
 ```
-
-For more information see the [docs for vueify](https://github.com/vuejs/vueify).
