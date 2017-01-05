@@ -12,7 +12,7 @@ It's designed to combine the excellent usability of Google Drive with the benefi
 ### installation
 
 ```
-pip3 install pdrive
+pip install pdrive
 ```
 
 ### getting started
