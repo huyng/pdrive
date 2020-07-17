@@ -91,7 +91,6 @@ def api():
                 os.makedirs(path)
             return json.dumps(process(path))
 
-
         return json.dumps(payload)
 
 
@@ -126,7 +125,6 @@ def index_page():
     return send_file(pth.join(frontend_path, "index.html"))
 
 
-
 def process(path):
     import os
     import stat
@@ -150,6 +148,7 @@ def main():
     p.add_argument("-p", "--port", default=9999)
     a = p.parse_args()
     app.run(host=a.host, port=a.port)
+
 
 if __name__ == '__main__':
     main()
