@@ -129,14 +129,25 @@ def process(path):
     import os
     import stat
     import datetime
+    import mimetypes
 
     name = pth.split(path)[1]
     statinfo = os.stat(path)
-    node_type = "dir" if stat.S_ISDIR(statinfo.st_mode) else "file"
+
+    if stat.S_ISDIR(statinfo.st_mode):
+        node_type = "dir"
+    else:
+        node_type = "file"
+
+    mimetype = None
+    if node_type == "file":
+        mimetype, _ = mimetypes.guess_type(path)
+
     return {
         "name": name,
         "path": path,
         "type": node_type,
+        "mimetype": mimetype,
         "size": statinfo.st_size,
         "mtime": datetime.datetime.utcfromtimestamp(statinfo.st_mtime).strftime("%Y-%M-%d %I:%M:%S %p")
     }

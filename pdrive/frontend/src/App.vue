@@ -65,7 +65,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         </div>
 
         <!-- Rename Dialog -->
-        <el-dialog title="Rename" v-model="renameDialog.visible">
+        <el-dialog title="Rename" :visible.sync="renameDialog.visible">
             <el-input v-model="renameDialog.newPath" v-on:keyup.enter.native="handleRenameDialogConfirm"
                 name="renameDialogNewPath"></el-input>
             <span slot="footer" class="dialog-footer">
@@ -75,7 +75,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         </el-dialog>
 
         <!-- Copy Dialog -->
-        <el-dialog title="Create copy" v-model="copyDialog.visible">
+        <el-dialog title="Create copy" :visible.sync="copyDialog.visible">
             <el-input v-model="copyDialog.newName" v-on:keyup.enter.native="handleCopyDialogConfirm"
                 name="copyDialogNewPath"></el-input>
             <span slot="footer" class="dialog-footer">
@@ -85,7 +85,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         </el-dialog>
 
         <!-- New Folder Dialog -->
-        <el-dialog title="Create new folder" v-model="newFolderDialog.visible">
+        <el-dialog title="Create new folder" :visible.sync="newFolderDialog.visible">
             <el-input placeholder="Name your new folder" v-model="newFolderDialog.newName"
                 v-on:keyup.enter.native="hanldeNewFolderDialogConfirm" name="newFolderDialogName"></el-input>
             <span slot="footer" class="dialog-footer">
@@ -95,13 +95,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         </el-dialog>
 
         <!-- Header Bar -->
-        <el-row class="header-bar">
+        <el-row type="flex" justify="space-between" class="header-bar">
             <el-col :span="4">
                 <span class="logo-mark">pDrive</span>
             </el-col>
+
+            <!-- View Mode Selection -->
+            <el-col class="header-bar-button-group" :span="6">
+                <el-button-group style="float:right; ">
+                    <el-button class="header-bar-button" v-bind:class="{ active: viewMode === 'list' }"
+                        v-on:click="viewMode = 'list'" plain="true" icon="el-icon-s-fold"></el-button>
+                    <el-button class="header-bar-button" v-bind:class="{ active: viewMode === 'grid' }"
+                        v-on:click="viewMode = 'grid'" plain="true" icon="el-icon-menu"></el-button>
+                </el-button-group>
+            </el-col>
+
         </el-row>
 
         <el-row class="main-view" :gutter="20">
+
+            <!-- Sub Header Bar -->
             <el-col class="content-view" :span="24">
                 <el-row class="toolbar-view">
                     <el-col :span="14">
@@ -128,8 +141,31 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                     </el-col>
                 </el-row>
 
-                <!-- Document Table -->
-                <table cellspace="0" cellpadding="0" border="0">
+                <!-- Grid View -->
+                <div class="grid-view noselect" v-if="viewMode === 'grid'">
+                    <div class="grid-item" v-for="row in sortedNodes"
+                         v-on:contextmenu="handleRowRightClick(row, $event)"
+                         v-on:click="handleRowClick(row, $event)"
+                         v-on:dblclick="handleRowDoubleClick(row, $event)"
+                         v-bind:class="{selected: row.isSelected}"
+                         style="float: left; width: 100px; margin: 30px;">
+
+                        <div style="text-align: center; padding-bottom: 10px; height: 100px; vertical-align: middle;">
+                            <i v-if="row.type == 'dir'"  class="material-icons" style="line-height: 100px; font-size: 64px">folder</i>
+                            <img v-else-if="row.type == 'file' && (row.mimetype == 'image/jpeg' || row.mimetype == 'image/png')" width=100 height=100 style="border: 1px solid #eee" v-bind:src="'/download?file='+row.path" />
+                            <i v-else-if="row.type == 'file'" class="material-icons md-24 md-dark" style="line-height: 100px; font-size: 64px">insert_drive_file</i>
+                        </div>
+                        <div class="filename" style="text-align: center; font-size: .8em;">
+                            <span style="margin-left: 10px">{{truncate(row.name, 40)}}</span>
+                        </div>
+                        </tr>
+                    </div>
+                </div>
+
+
+
+                <!-- List View -->
+                <table v-if="viewMode === 'list'" cellspace="0" cellpadding="0" border="0">
                     <thead>
                         <tr>
                             <th v-on:click="toggleSort('name', $event)">
@@ -192,6 +228,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         font-family: "Avenir", "Arial", sans-serif;
     }
 
+    .noselect {
+    -webkit-touch-callout: none; /* iOS Safari */
+        -webkit-user-select: none; /* Safari */
+        -khtml-user-select: none; /* Konqueror HTML */
+        -moz-user-select: none; /* Old versions of Firefox */
+            -ms-user-select: none; /* Internet Explorer/Edge */
+                user-select: none; /* Non-prefixed version, currently
+                                    supported by Chrome, Edge, Opera and Firefox */
+    }
     .logo-mark {
         font-size: 24px;
         color: white;
@@ -302,6 +347,31 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         border-bottom: 1px solid #e0e6ed;
     }
 
+    .header-bar-button-group .el-button {
+        background-color: #285688F1;
+        border: 1px solid #28568821 !important;
+        color: #345;
+    }
+
+    .header-bar-button.el-button {
+        background-color: #285688F1;
+    }
+
+    .header-bar-button.el-button.active {
+        background-color: #28568861 !important;
+        color: white !important;
+    }
+
+    /* Grid View Styles */
+
+    .grid-view .grid-item .filename {
+        border-radius: 4px;
+        padding: 4px;
+    }
+    .grid-view .grid-item.selected .filename {
+        background: #5858ff;
+        color: white;
+    }
 
     /* TABLE styles*/
 
@@ -416,6 +486,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 cwd: null,
                 inodes: [],
                 lastClickedRow: null,
+                viewMode: "list",           // possible values: list, grid
                 currentSort: {
                     order: "descending",
                     column: "mtime"
