@@ -18,10 +18,10 @@
 from setuptools import setup
 
 setup(name='pdrive',
-      version='0.5',
+      version='0.6',
       description='File manager',
       author='Huy Nguyen',
-      author_email='huy@huyng.com',
+      author_email='121183+huyng@users.noreply.github.com',
       packages=['pdrive', "pdrive.frontend", "pdrive.backend"],
       package_data={
           'pdrive.frontend': ['index.html', 'dist/*']
