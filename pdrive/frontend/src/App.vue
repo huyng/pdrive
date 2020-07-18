@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <!-- to make this target a valid drop target, we must listen to the dragover event  -->
         <div v-on:dragover.prevent v-on:drop="handleDragDrop" v-on:dragleave.self="handleDragLeave"
             v-show="uploadOverLay.visible" class="upload-overlay">
-            <div style="margin: 0px; cursor: pointer;">
+            <div style="cursor: pointer;">
                 <i v-on:click="uploadOverLay.visible = false" class="material-icons md-48 md-light">close</i>
             </div>
             <div
@@ -52,10 +52,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <!-- Right click contextual menu -->
         <div class="contextual-menu" v-bind:style="{ top: contextualMenu.y + 'px', left: contextualMenu.x + 'px' }"
             v-show="contextualMenu.visible">
-            <div v-show="contextualMenuItemVisibility.preview"><i class="material-icons md-18">remove_red_eye</i>
-                Preview</div>
+            <!-- <div v-show="contextualMenuItemVisibility.preview"><i class="material-icons md-18">remove_red_eye</i>
+                Preview</div> -->
             <div v-show="contextualMenuItemVisibility.copy" v-on:click="handleCopyContextualMenu"><i
-                    class="material-icons md-18">content_copy</i> Create copy</div>
+                    class="material-icons md-18">content_copy</i> Duplicate</div>
             <div v-show="contextualMenuItemVisibility.rename" v-on:click="handleRenameContextualMenu"><i
                     class="material-icons md-18">edit</i> Rename</div>
             <div v-show="contextualMenuItemVisibility.download" v-on:click="handleDownloadContextualMenu"><i
@@ -76,7 +76,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
         <!-- Copy Dialog -->
         <el-dialog title="Create copy" :visible.sync="copyDialog.visible">
-            <el-input v-model="copyDialog.newName" v-on:keyup.enter.native="handleCopyDialogConfirm"
+            <el-input
+                v-model="copyDialog.newName"
+                v-on:keyup.enter.native="handleCopyDialogConfirm"
                 name="copyDialogNewPath"></el-input>
             <span slot="footer" class="dialog-footer">
                 <el-button @click="copyDialog.visible = false">Cancel</el-button>
@@ -100,24 +102,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 <span class="logo-mark">pDrive</span>
             </el-col>
 
-            <!-- View Mode Selection -->
+            <!-- View Mode Selection Toolbar -->
             <el-col class="header-bar-button-group" :span="6">
                 <el-button-group style="float:right; ">
-                    <el-button class="header-bar-button" v-bind:class="{ active: viewMode === 'list' }"
-                        v-on:click="viewMode = 'list'" plain="true" icon="el-icon-s-fold"></el-button>
-                    <el-button class="header-bar-button" v-bind:class="{ active: viewMode === 'grid' }"
-                        v-on:click="viewMode = 'grid'" plain="true" icon="el-icon-menu"></el-button>
+                    <el-tooltip content="Display As Table" placement="bottom">
+                        <el-button class="header-bar-button" v-bind:class="{ active: viewMode === 'list' }"
+                            v-on:click="viewMode = 'list'" plain="true" icon="el-icon-s-fold"></el-button>
+                    </el-tooltip>
+
+                    <el-tooltip content="Display As Grid" placement="bottom">
+                        <el-button class="header-bar-button" v-bind:class="{ active: viewMode === 'grid' }"
+                            v-on:click="viewMode = 'grid'" plain="true" icon="el-icon-menu"></el-button>
+                    </el-tooltip>
                 </el-button-group>
             </el-col>
 
         </el-row>
 
-        <el-row class="main-view" :gutter="20">
+        <el-row class="main-view"  :gutter="20">
 
             <!-- Sub Header Bar -->
             <el-col class="content-view" :span="24">
                 <el-row class="toolbar-view">
-                    <el-col :span="14">
+                    <el-col :span="24">
                         <div style="float:left" class="breadcrumb-view">
                             <span v-for="(segment, index) in pathSegments">
                                 <span v-on:click="handleSegmentClick(segment, $event)"
@@ -125,19 +132,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                                 <i v-if="index < pathSegments.length-1" class="material-icons">chevron_right</i>
                             </span>
                         </div>
-                        <el-dropdown menu-align="start" size="large">
-                            <el-button style=" margin-top: 8px; margin-left:16px;" type="text">New <i
-                                    style="vertical-align: text-top" class="material-icons md-18">arrow_drop_down</i>
-                            </el-button>
-                            <el-dropdown-menu slot="dropdown">
-                                <el-dropdown-item v-on:click.native="handleNewFolderMenu"><i
-                                        style="vertical-align:text-bottom; margin-right:6px;"
-                                        class="material-icons md-24">create_new_folder</i> New folder</el-dropdown-item>
-                                <el-dropdown-item v-on:click.native="uploadOverLay.visible = true"><i
-                                        style="vertical-align:text-bottom; margin-right:6px;"
-                                        class="material-icons md-24">file_upload</i> Upload</el-dropdown-item>
-                            </el-dropdown-menu>
-                        </el-dropdown>
+                        <div style="float:right;margin-right:20px;">
+                            <el-dropdown menu-align="start" size="large">
+                                <el-button style=" margin-top: 8px; margin-left:16px;" type="text">New <i
+                                        style="vertical-align: text-top" class="material-icons md-18">arrow_drop_down</i>
+                                </el-button>
+                                <el-dropdown-menu slot="dropdown">
+                                    <el-dropdown-item v-on:click.native="handleNewFolderMenu"><i
+                                            style="vertical-align:text-bottom; margin-right:6px;"
+                                            class="material-icons md-24">create_new_folder</i> New folder</el-dropdown-item>
+                                    <el-dropdown-item v-on:click.native="uploadOverLay.visible = true"><i
+                                            style="vertical-align:text-bottom; margin-right:6px;"
+                                            class="material-icons md-24">file_upload</i> Upload</el-dropdown-item>
+                                </el-dropdown-menu>
+                            </el-dropdown>
+                        </div>
                     </el-col>
                 </el-row>
 
@@ -252,9 +261,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         position: fixed;
         bottom: 0;
         right: 0px;
-        background-color: rgba(0, 0, 0, .8);
+        background-color: rgba(0, 0, 0, .9);
         z-index: 999;
-        padding: 40px;
+        padding: 20px;
         left: 0px;
         top: 0px;
     }
@@ -371,6 +380,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     .grid-view .grid-item.selected .filename {
         background: #5858ff;
         color: white;
+        overflow-x: hidden;
+    }
+
+    .grid-view .grid-item .filename {
+        overflow-x: hidden;
     }
 
     /* TABLE styles*/
@@ -504,7 +518,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 copyDialog: {
                     visible: false,
                     node: null,
-                    newPath: null
+                    newName: null
                 },
                 newFolderDialog: {
                     visible: false,

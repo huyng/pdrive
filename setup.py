@@ -18,7 +18,7 @@
 from setuptools import setup
 
 setup(name='pdrive',
-      version='0.6',
+      version='0.6.1',
       description='File manager',
       author='Huy Nguyen',
       author_email='121183+huyng@users.noreply.github.com',
