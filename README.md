@@ -6,7 +6,7 @@ You can use it as a pretty alternative to `python -m http.server` or as a simple
 
 It's designed to combine the excellent usability of Google Drive with the benefits of having control over your own data.
 
-![pdrive](https://user-images.githubusercontent.com/121183/87984756-50072100-ca8f-11ea-853d-a3fb976156bc.gif)
+![pdrive](https://user-images.githubusercontent.com/121183/87987433-7e86fb00-ca93-11ea-9236-14823d0650c2.gif)
 
 
 ### installation
