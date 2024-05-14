@@ -31,7 +31,7 @@ setup(name='pdrive',
       author_email='121183+huyng@users.noreply.github.com',
       packages=['pdrive', "pdrive.frontend", "pdrive.backend"],
       package_data={
-          'pdrive.frontend': ['index.html', 'dist/*']
+          'pdrive.frontend': ['index.html', 'dist/assets/*', 'dist/*']
       },
       entry_points={
           "console_scripts": [

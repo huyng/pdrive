@@ -14,16 +14,31 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import Vue from 'vue'
+// import Vue from 'vue'
+// import App from './App.vue'
+// // import ElementUI from "element-ui"
+// // import 'element-ui/lib/theme-chalk/index.css'
+
+
+// // Vue.use(ElementUI);
+// new Vue({
+//   el: '#app',
+//   render: function(h) {
+//       return <App></App>;
+//   }
+// })
+
+
+import { createApp } from 'vue'
+import ElementPlus from 'element-plus'
+import 'element-plus/theme-chalk/index.css'
 import App from './App.vue'
-import ElementUI from "element-ui"
-import 'element-ui/lib/theme-chalk/index.css'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
 
-Vue.use(ElementUI);
-new Vue({
-  el: '#app',
-  render: function(h) {
-      return <App></App>;
-  }
-})
+const app = createApp(App).use(ElementPlus)
+for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+    app.component(key, component)
+}
+app.mount('#app')
+

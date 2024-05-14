@@ -34,9 +34,11 @@ from flask import send_from_directory
 frontend_path = pth.join(
     pth.split(pth.split(pth.abspath(__file__))[0])[0], "frontend")
 
+print(frontend_path)
+
 app = Flask(__name__,
             static_folder=pth.join(frontend_path, "dist"),
-            static_url_path="/dist")
+            static_url_path="")
 
 
 basedir = os.path.abspath(os.curdir)
@@ -126,7 +128,7 @@ def upload_file():
 
 @app.route("/")
 def index_page():
-    return send_file(pth.join(frontend_path, "index.html"))
+    return send_file(pth.join(frontend_path, "dist", "index.html"))
 
 
 def process(path):

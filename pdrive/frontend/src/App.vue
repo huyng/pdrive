@@ -65,35 +65,49 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         </div>
 
         <!-- Rename Dialog -->
-        <el-dialog title="Rename" :visible.sync="renameDialog.visible">
+        <el-dialog v-model="renameDialog.visible">
+            <template #header>
+                Rename
+            </template>
             <el-input v-model="renameDialog.newPath" v-on:keyup.enter.native="handleRenameDialogConfirm"
                 name="renameDialogNewPath"></el-input>
-            <span slot="footer" class="dialog-footer">
-                <el-button @click="renameDialog.visible = false">Cancel</el-button>
-                <el-button type="primary" v-on:click="handleRenameDialogConfirm">Rename</el-button>
-            </span>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="renameDialog.visible = false">Cancel</el-button>
+                    <el-button type="primary" v-on:click="handleRenameDialogConfirm">Rename</el-button>
+                </span>
+            </template>
         </el-dialog>
 
         <!-- Copy Dialog -->
-        <el-dialog title="Create copy" :visible.sync="copyDialog.visible">
-            <el-input
-                v-model="copyDialog.newName"
-                v-on:keyup.enter.native="handleCopyDialogConfirm"
+        <el-dialog title="Create copy" v-model="copyDialog.visible">
+            <template #header>
+                Create Copy
+            </template>
+
+            <el-input v-model="copyDialog.newName" v-on:keyup.enter.native="handleCopyDialogConfirm"
                 name="copyDialogNewPath"></el-input>
-            <span slot="footer" class="dialog-footer">
-                <el-button @click="copyDialog.visible = false">Cancel</el-button>
-                <el-button type="primary" v-on:click="handleCopyDialogConfirm">Confirm</el-button>
-            </span>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="copyDialog.visible = false">Cancel</el-button>
+                    <el-button type="primary" v-on:click="handleCopyDialogConfirm">Confirm</el-button>
+                </span>
+            </template>
         </el-dialog>
 
         <!-- New Folder Dialog -->
-        <el-dialog title="Create new folder" :visible.sync="newFolderDialog.visible">
+        <el-dialog v-model="newFolderDialog.visible">
+            <template #header>
+                Create new folder
+            </template>
             <el-input placeholder="Name your new folder" v-model="newFolderDialog.newName"
                 v-on:keyup.enter.native="hanldeNewFolderDialogConfirm" name="newFolderDialogName"></el-input>
-            <span slot="footer" class="dialog-footer">
-                <el-button @click="newFolderDialog.visible = false">Cancel</el-button>
-                <el-button type="primary" v-on:click="hanldeNewFolderDialogConfirm">Create folder</el-button>
-            </span>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="newFolderDialog.visible = false">Cancel</el-button>
+                    <el-button type="primary" @click="hanldeNewFolderDialogConfirm">Create folder</el-button>
+                </span>
+            </template>
         </el-dialog>
 
         <!-- Header Bar -->
@@ -107,19 +121,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 <el-button-group style="float:right; ">
                     <el-tooltip content="Display As Table" placement="bottom">
                         <el-button class="header-bar-button" v-bind:class="{ active: viewMode === 'list' }"
-                            v-on:click="viewMode = 'list'" plain="true" icon="el-icon-s-fold"></el-button>
+                            v-on:click="viewMode = 'list'" :plain=true>
+                            <el-icon>
+                                <Fold />
+                            </el-icon>
+                        </el-button>
                     </el-tooltip>
 
                     <el-tooltip content="Display As Grid" placement="bottom">
                         <el-button class="header-bar-button" v-bind:class="{ active: viewMode === 'grid' }"
-                            v-on:click="viewMode = 'grid'" plain="true" icon="el-icon-menu"></el-button>
+                            v-on:click="viewMode = 'grid'" :plain=true>
+                            <el-icon>
+                                <Menu />
+                            </el-icon>
+                        </el-button>
                     </el-tooltip>
                 </el-button-group>
             </el-col>
 
         </el-row>
 
-        <el-row class="main-view"  :gutter="20">
+        <el-row class="main-view" :gutter="20">
 
             <!-- Sub Header Bar -->
             <el-col class="content-view" :span="24">
@@ -134,17 +156,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                         </div>
                         <div style="float:right;margin-right:20px;">
                             <el-dropdown menu-align="start" size="large">
-                                <el-button style=" margin-top: 8px; margin-left:16px;" type="text">New <i
-                                        style="vertical-align: text-top" class="material-icons md-18">arrow_drop_down</i>
+                                <el-button style=" margin-top: 8px; margin-left:16px;" type="primary">New <i
+                                        style="vertical-align: middle" class="material-icons md-18">arrow_drop_down</i>
                                 </el-button>
-                                <el-dropdown-menu slot="dropdown">
-                                    <el-dropdown-item v-on:click.native="handleNewFolderMenu"><i
-                                            style="vertical-align:text-bottom; margin-right:6px;"
-                                            class="material-icons md-24">create_new_folder</i> New folder</el-dropdown-item>
-                                    <el-dropdown-item v-on:click.native="uploadOverLay.visible = true"><i
-                                            style="vertical-align:text-bottom; margin-right:6px;"
-                                            class="material-icons md-24">file_upload</i> Upload</el-dropdown-item>
-                                </el-dropdown-menu>
+                                <template #dropdown>
+                                    <el-dropdown-menu>
+                                        <el-dropdown-item v-on:click.native="handleNewFolderMenu"><i
+                                                style="vertical-align:text-bottom; margin-right:6px;"
+                                                class="material-icons md-24">create_new_folder</i> New
+                                            folder</el-dropdown-item>
+                                        <el-dropdown-item v-on:click.native="uploadOverLay.visible = true"><i
+                                                style="vertical-align:text-bottom; margin-right:6px;"
+                                                class="material-icons md-24">file_upload</i> Upload</el-dropdown-item>
+                                    </el-dropdown-menu>
+                                </template>
                             </el-dropdown>
                         </div>
                     </el-col>
@@ -153,21 +178,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 <!-- Grid View -->
                 <div class="grid-view noselect" v-if="viewMode === 'grid'">
                     <div class="grid-item" v-for="row in sortedNodes"
-                         v-on:contextmenu="handleRowRightClick(row, $event)"
-                         v-on:click="handleRowClick(row, $event)"
-                         v-on:dblclick="handleRowDoubleClick(row, $event)"
-                         v-bind:class="{selected: row.isSelected}"
-                         style="float: left; width: 100px; margin: 30px;">
+                        v-on:contextmenu="handleRowRightClick(row, $event)" v-on:click="handleRowClick(row, $event)"
+                        v-on:dblclick="handleRowDoubleClick(row, $event)" v-bind:class="{selected: row.isSelected}"
+                        style="float: left; width: 100px; margin: 30px;">
 
                         <div style="text-align: center; padding-bottom: 10px; height: 100px; vertical-align: middle;">
-                            <i v-if="row.type == 'dir'"  class="material-icons" style="line-height: 100px; font-size: 64px">folder</i>
-                            <img v-else-if="row.type == 'file' && (row.mimetype == 'image/jpeg' || row.mimetype == 'image/png')" width=100 height=100 style="border: 1px solid #eee" v-bind:src="'/download?file='+row.path" />
-                            <i v-else-if="row.type == 'file'" class="material-icons md-24 md-dark" style="line-height: 100px; font-size: 64px">insert_drive_file</i>
+                            <i v-if="row.type == 'dir'" class="material-icons"
+                                style="line-height: 100px; font-size: 64px">folder</i>
+                            <img v-else-if="row.type == 'file' && (row.mimetype == 'image/jpeg' || row.mimetype == 'image/png')"
+                                width=100 height=100 style="border: 1px solid #eee"
+                                v-bind:src="'/download?file='+row.path" />
+                            <i v-else-if="row.type == 'file'" class="material-icons md-24 md-dark"
+                                style="line-height: 100px; font-size: 64px">insert_drive_file</i>
                         </div>
                         <div class="filename" style="text-align: center; font-size: .8em;">
                             <span style="margin-left: 10px">{{truncate(row.name, 40)}}</span>
                         </div>
-                        </tr>
                     </div>
                 </div>
 
@@ -238,14 +264,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     }
 
     .noselect {
-    -webkit-touch-callout: none; /* iOS Safari */
-        -webkit-user-select: none; /* Safari */
-        -khtml-user-select: none; /* Konqueror HTML */
-        -moz-user-select: none; /* Old versions of Firefox */
-            -ms-user-select: none; /* Internet Explorer/Edge */
-                user-select: none; /* Non-prefixed version, currently
+        -webkit-touch-callout: none;
+        /* iOS Safari */
+        -webkit-user-select: none;
+        /* Safari */
+        -khtml-user-select: none;
+        /* Konqueror HTML */
+        -moz-user-select: none;
+        /* Old versions of Firefox */
+        -ms-user-select: none;
+        /* Internet Explorer/Edge */
+        user-select: none;
+        /* Non-prefixed version, currently
                                     supported by Chrome, Edge, Opera and Firefox */
     }
+
     .logo-mark {
         font-size: 24px;
         color: white;
@@ -377,6 +410,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         border-radius: 4px;
         padding: 4px;
     }
+
     .grid-view .grid-item.selected .filename {
         background: #5858ff;
         color: white;
@@ -490,7 +524,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 <script>
     import $ from "jquery";
-    import Vue from "vue";
+    import { ref, nextTick } from 'vue'
+    import { Search } from '@element-plus/icons'
+
+
 
     export default {
         name: 'app',
@@ -793,9 +830,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             // New menu commands
             handleNewFolderMenu(event) {
                 this.newFolderDialog.visible = true;
-                Vue.nextTick(function () {
+                setTimeout(() => {
                     $("input[name='newFolderDialogName']").focus();
-                });
+                }, 300)
             },
 
             // contextual menu commands
@@ -805,19 +842,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 name = name[name.length - 1];
                 this.copyDialog.newName = name;
                 this.copyDialog.visible = true;
-                Vue.nextTick(function () {
+
+                setTimeout(() => {
                     $("input[name='copyDialogNewPath']").focus();
-                });
+                }, 300)
             },
 
-            handleRenameContextualMenu(event) {
+            async handleRenameContextualMenu(event) {
                 this.renameDialog.node = this.getCurrentSelectedRows()[0];
                 this.renameDialog.newPath = this.renameDialog.node.path;
                 this.renameDialog.visible = true;
-                Vue.nextTick(function () {
+                setTimeout(() => {
                     $("input[name='renameDialogNewPath']").focus();
-                });
-
+                }, 300)
             },
 
             handleDownloadContextualMenu(event) {
