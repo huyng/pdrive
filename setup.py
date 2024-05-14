@@ -18,7 +18,7 @@
 from setuptools import setup
 
 setup(name='pdrive',
-      version='0.6.1',
+      version='0.7.0',
       description='File manager',
       author='Huy Nguyen',
       author_email='121183+huyng@users.noreply.github.com',
@@ -36,4 +36,5 @@ setup(name='pdrive',
       url="https://github.com/huyng/pdrive")
 
 # to distribute run:
-# python setup.py register sdist  upload
+# python setup.py register sdist upload
+# python -m twine  upload dist
