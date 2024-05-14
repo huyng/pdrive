@@ -15,7 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import gunicorn.app.base
+import logging
+from flask import cli
 import sys
 import os.path as pth
 import os
@@ -156,17 +157,31 @@ def process(path):
     }
 
 
+def print_banner(args):
+    print("")
+    print("\x1b[32m================\x1b[0m")
+    print("\x1b[32m-    PDrive    -\x1b[0m")
+    print("\x1b[32m================\x1b[0m")
+    print("")
+    print(f"\x1b[32mStarting server at http://{args.host}:{args.port}\x1b[0m")
+    print("")
+
+
 def main():
     p = ArgumentParser()
-    p.add_argument("-H", "--host", default="127.0.0.1")
-    p.add_argument("-p", "--port", default=9999)
+    p.add_argument("-H", "--host", default="127.0.0.1",
+                   help="Host address to bind server to (default: 127.0.0.1)")
+    p.add_argument("-p", "--port", default=5000,
+                   help="Host port to bind server to (default: 9999)")
     a = p.parse_args()
 
     # If gunicorn is available use it rather than the
     # default dev server
-    try:
-        import gunicorn
+    import importlib
+    gunicorn_import_available = importlib.find_loader("gunicorn")
+    if gunicorn_import_available:
         import gunicorn.app.base
+        import multiprocessing
 
         class Application(gunicorn.app.base.BaseApplication):
 
@@ -185,14 +200,31 @@ def main():
                 return self.application
 
         # start app
+        print_banner(a)
+
+        cpu_count = multiprocessing.cpu_count()
         options = {
             'bind': '%s:%s' % (a.host, a.port),
-            'workers': 3,
+            'workers': min(cpu_count, 3),
             'timeout': 120,
+            'threads': 3
         }
         Application(app, options).run()
+    else:
+        print_banner(a)
 
-    except ImportError:
+        print("")
+        print("\x1b[33mYou are running PDrive using a built-in minimal web server. For \n"
+              "better file upload & download performance, we recommend you install \n"
+              "the gunicorn web server python package. PDrive will automatically \n"
+              "use it if it is available:\x1b[0m")
+        print("")
+        print("    pip install gunicorn")
+        print("")
+
+        log = logging.getLogger('werkzeug')
+        log.disabled = True
+        cli.show_server_banner = lambda *_: None
         app.run(host=a.host, port=a.port)
 
 
