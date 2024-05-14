@@ -17,9 +17,16 @@
 
 from setuptools import setup
 
+from pathlib import Path
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
+
+
 setup(name='pdrive',
-      version='0.7.0',
-      description='File manager',
+      version='0.7.1',
+      description='A simple file manager',
+      long_description=long_description,
+      long_description_content_type='text/markdown',
       author='Huy Nguyen',
       author_email='121183+huyng@users.noreply.github.com',
       packages=['pdrive', "pdrive.frontend", "pdrive.backend"],
