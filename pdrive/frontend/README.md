@@ -12,4 +12,6 @@ npm install
 npm run build
 
 
+cd ..
+python setup.py install -f
 ```

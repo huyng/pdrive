@@ -112,9 +112,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
         <!-- Header Bar -->
         <el-row type="flex" justify="space-between" class="header-bar">
-            <el-col :span="4">
+            <el-col :span="2">
                 <span class="logo-mark">pDrive</span>
             </el-col>
+            <!-- <el-col :span="16" style="padding-top: .5rem">
+                <span style="color:rgb(36, 51, 112)">{{basedir}}</span>
+            </el-col> -->
 
             <!-- View Mode Selection Toolbar -->
             <el-col class="header-bar-button-group" :span="6">
@@ -606,7 +609,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 var segments = [];
                 var fullPath = this.basedir;
                 segments.push({
-                    "name": "My drive",
+                    "name": this.basedir,
                     "component": "",
                     "path": fullPath
                 });
