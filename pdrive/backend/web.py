@@ -207,9 +207,8 @@ def main():
         cpu_count = multiprocessing.cpu_count()
         options = {
             'bind': '%s:%s' % (a.host, a.port),
-            'workers': min(cpu_count, 3),
+            'workers': min(cpu_count+1, 4),
             'timeout': 120,
-            'threads': 3
         }
         Application(app, options).run()
     else:
