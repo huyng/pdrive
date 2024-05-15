@@ -23,7 +23,7 @@ long_description = (this_directory / "README.md").read_text()
 
 
 setup(name='pdrive',
-      version='0.7.3',
+      version='0.8.0',
       description='A simple file manager',
       long_description=long_description,
       long_description_content_type='text/markdown',
