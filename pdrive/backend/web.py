@@ -18,6 +18,7 @@
 import logging
 from flask import cli
 import sys
+import platform
 import os.path as pth
 import os
 import json
@@ -160,6 +161,10 @@ def process(path):
 
 
 def print_banner(args):
+    hostname = platform.node()
+
+
+
     print("")
     print("\x1b[32m================\x1b[0m")
     print("\x1b[32m-    PDrive    -\x1b[0m")
@@ -167,13 +172,19 @@ def print_banner(args):
     print("")
     print(f"\x1b[32mStarting server at http://{args.host}:{args.port}\x1b[0m")
     print("")
+    print("\x1b[32mYou can SSH Tunnel to this service in a "
+          "separate terminal with:\x1b[0m")
+    print("")
+    print(f"\x1b[32m    ssh -N -L {args.port}:localhost:{args.port} "
+          f"{hostname}\x1b[0m")
+    print("")
 
 
 def main():
     p = ArgumentParser()
     p.add_argument("-H", "--host", default="127.0.0.1",
                    help="Host address to bind server to (default: 127.0.0.1)")
-    p.add_argument("-p", "--port", default=5000,
+    p.add_argument("-p", "--port", default=9999,
                    help="Host port to bind server to (default: 9999)")
     a = p.parse_args()
 

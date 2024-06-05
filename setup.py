@@ -23,7 +23,7 @@ long_description = (this_directory / "README.md").read_text()
 
 
 setup(name='pdrive',
-      version='0.8.1',
+      version='0.8.2',
       description='A simple file manager',
       long_description=long_description,
       long_description_content_type='text/markdown',
@@ -38,7 +38,7 @@ setup(name='pdrive',
               "pdrive = pdrive.backend.web:main"
           ]
       },
-      install_requires=["Flask"],
+      install_requires=["Flask", "gunicorn"],
       zip_safe=False,
       url="https://github.com/huyng/pdrive")
 
