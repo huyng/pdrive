@@ -9,7 +9,7 @@ It's designed to combine the excellent usability of Google Drive with the benefi
 ![pdrive](https://user-images.githubusercontent.com/121183/87987433-7e86fb00-ca93-11ea-9236-14823d0650c2.gif)
 
 
-### installation
+### Installation
 
 ```
 pip install pdrive
@@ -24,7 +24,7 @@ cd /path/to/my/directory
 python -m pdrive
 ```
 
-### getting started
+### Getting started
 
 You can run pdrive by calling the `python -m pdrive` command within a directory you want to explore. Once running, you can visit the web interface at `http://127.0.0.1:9999`.
 
