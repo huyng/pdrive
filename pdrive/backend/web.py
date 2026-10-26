@@ -191,7 +191,8 @@ def main():
     # If gunicorn is available use it rather than the
     # default dev server
     import importlib
-    gunicorn_import_available = importlib.find_loader("gunicorn")
+    import importlib.util
+    gunicorn_import_available = importlib.util.find_spec("gunicorn")
     if gunicorn_import_available:
         import gunicorn.app.base
         import multiprocessing

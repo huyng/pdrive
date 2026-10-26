@@ -8,10 +8,13 @@ This is the frontend ui based on [vue.js 2.0](https://vuejs.org/)
 # install dependencies
 npm install
 
-# build concatenate and compress your js/css files to dist/build.js
+# build the ui bundle into dist/
 npm run build
 
 
+# reinstall the python package from the repo root
 cd ..
-python setup.py install -f
+uv pip install -e .
+# or, with plain pip:
+# pip install -e .
 ```
