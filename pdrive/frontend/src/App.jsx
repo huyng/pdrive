@@ -58,6 +58,7 @@ function writeLocationPath(path, { replace = false } = {}) {
 export default function App() {
     const [basedir, setBasedir] = useState('')
     const [cwd, setCwd] = useState('')
+    const [hostname, setHostname] = useState(null)          // null until the backend reports it
     const [nodes, setNodes] = useState([])
     const [lastClickedRow, setLastClickedRow] = useState(null)
     const [viewMode, setViewMode] = useState('list')       // possible values: list, grid
@@ -104,8 +105,22 @@ export default function App() {
     const applyListing = useCallback((data) => {
         setCwd(data.cwd)
         setBasedir(data.basedir)
+        if (data.hostname !== undefined) {
+            setHostname(data.hostname)
+        }
         setNodes(data.nodes.map((node) => ({ ...node, isSelected: false })))
     }, [])
+
+    // Label the tab with the machine pdrive is serving files from. This is
+    // more useful than window.location.hostname, which is usually just
+    // localhost when the server is reached through an ssh tunnel.
+    useEffect(() => {
+        if (hostname === null) {
+            return
+        }
+        const label = hostname || window.location.hostname
+        document.title = label ? `${label} - pdrive` : 'pdrive'
+    }, [hostname])
 
     // Monotonic id so that a slow response from an older navigation can never
     // overwrite the directory the user is currently looking at.

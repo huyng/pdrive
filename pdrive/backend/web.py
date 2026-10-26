@@ -43,6 +43,7 @@ app = Flask(__name__,
 
 
 basedir = os.path.abspath(os.curdir)
+hostname = platform.node()
 
 
 @app.route("/api", methods=["GET", "POST"])
@@ -54,6 +55,7 @@ def api():
         data = {
             "basedir": basedir,
             "cwd": basedir,
+            "hostname": hostname,
             "nodes": nodes
         }
         return json.dumps(data)
@@ -72,6 +74,7 @@ def api():
             data = {
                 "basedir": basedir,
                 "cwd": path,
+                "hostname": hostname,
                 "nodes": nodes
             }
             return json.dumps(data)

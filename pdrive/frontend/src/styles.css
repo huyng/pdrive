@@ -317,6 +317,7 @@ body {
 
 .new-button {
     margin-top: 8px;
+    margin-bottom: 8px;
     margin-left: 16px;
 }
 
@@ -389,6 +390,11 @@ body {
     text-align: center;
     font-size: .8em;
     overflow-x: hidden;
+    transition: background-color .1s ease-in-out;
+}
+
+.grid-view .grid-item:hover .filename {
+    background: #f1f3f6;
 }
 
 .grid-view .grid-item.selected .filename {
@@ -415,6 +421,15 @@ table thead {
 table tr.selected {
     background: #58B7FF;
     color: white;
+}
+
+table tbody tr {
+    transition: background-color .1s ease-in-out;
+}
+
+/* Light gray highlight on hover, without dimming the selected row */
+table tbody tr:hover:not(.selected) {
+    background: #f1f3f6;
 }
 
 table td {
