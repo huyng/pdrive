@@ -24,7 +24,7 @@ import JobProgressPanel from './components/JobProgressPanel.jsx'
 import PromptDialog from './components/PromptDialog.jsx'
 import UploadOverlay from './components/UploadOverlay.jsx'
 import { fetchListing, postCommand, uploadFile } from './api.js'
-import { basename, sortNodes } from './utils.js'
+import { basename, isDotfile, sortNodes, withoutDotfiles } from './utils.js'
 
 // The current directory is mirrored into the URL hash so that the browser's
 // back/forward buttons (and their keyboard shortcuts) move between visited
@@ -62,6 +62,7 @@ export default function App() {
     const [nodes, setNodes] = useState([])
     const [lastClickedRow, setLastClickedRow] = useState(null)
     const [viewMode, setViewMode] = useState('list')       // possible values: list, grid
+    const [showDotfiles, setShowDotfiles] = useState(false)
     const [sort, setSort] = useState({ column: 'mtime', order: 'descending' })
 
     const [menu, setMenu] = useState({ visible: false, x: 100, y: 100 })
@@ -72,8 +73,11 @@ export default function App() {
     const [overlayVisible, setOverlayVisible] = useState(false)
     const [jobProgress, setJobProgress] = useState({ visible: false, tasks: [] })
 
-    const sortedNodes = useMemo(() => sortNodes(nodes, sort), [nodes, sort])
-    const selectedNodes = useMemo(() => nodes.filter((node) => node.isSelected), [nodes])
+    const visibleNodes = useMemo(() => (
+        showDotfiles ? nodes : withoutDotfiles(nodes)
+    ), [nodes, showDotfiles])
+    const sortedNodes = useMemo(() => sortNodes(visibleNodes, sort), [visibleNodes, sort])
+    const selectedNodes = useMemo(() => visibleNodes.filter((node) => node.isSelected), [visibleNodes])
 
     const pathSegments = useMemo(() => {
         if (!cwd) {
@@ -208,7 +212,8 @@ export default function App() {
         setMenu((prev) => ({ ...prev, visible: false }))
 
         setNodes((prev) => {
-            const names = sortNodes(prev, sort).map((node) => node.name)
+            const names = sortNodes(showDotfiles ? prev : withoutDotfiles(prev), sort)
+                .map((node) => node.name)
             const toSelect = new Set([row.name])
 
             if (event.shiftKey && lastClickedRow) {
@@ -239,7 +244,7 @@ export default function App() {
         })
 
         setLastClickedRow(row.name)
-    }, [lastClickedRow, sort])
+    }, [lastClickedRow, showDotfiles, sort])
 
     const handleRowRightClick = useCallback((row, event) => {
         event.preventDefault()
@@ -265,6 +270,17 @@ export default function App() {
     const handleSegmentClick = useCallback((segment) => {
         openFolder(segment.path)
     }, [openFolder])
+
+    const toggleDotfiles = useCallback(() => {
+        // dropping the selection keeps actions (delete, rename, ...) from
+        // targeting rows that are about to be hidden
+        if (showDotfiles) {
+            setNodes((prev) => prev.map((node) => (
+                isDotfile(node) && node.isSelected ? { ...node, isSelected: false } : node
+            )))
+        }
+        setShowDotfiles((prev) => !prev)
+    }, [showDotfiles])
 
     const toggleSort = useCallback((column) => {
         setSort((prev) => ({
@@ -525,26 +541,44 @@ export default function App() {
             <div className="header-bar">
                 <span className="logo-mark">pDrive</span>
 
-                {/* View Mode Selection Toolbar */}
-                <div className="header-bar-button-group">
-                    <button
-                        type="button"
-                        title="Display As Table"
-                        aria-pressed={viewMode === 'list'}
-                        className={'header-bar-button' + (viewMode === 'list' ? ' active' : '')}
-                        onClick={() => setViewMode('list')}
-                    >
-                        <i className="material-icons">view_list</i>
-                    </button>
-                    <button
-                        type="button"
-                        title="Display As Grid"
-                        aria-pressed={viewMode === 'grid'}
-                        className={'header-bar-button' + (viewMode === 'grid' ? ' active' : '')}
-                        onClick={() => setViewMode('grid')}
-                    >
-                        <i className="material-icons">grid_view</i>
-                    </button>
+                <div className="header-bar-actions">
+                    {/* View Mode Selection Toolbar */}
+                    <div className="header-bar-button-group">
+                        <button
+                            type="button"
+                            title="Display As Table"
+                            aria-pressed={viewMode === 'list'}
+                            className={'header-bar-button' + (viewMode === 'list' ? ' active' : '')}
+                            onClick={() => setViewMode('list')}
+                        >
+                            <i className="material-icons">view_list</i>
+                        </button>
+                        <button
+                            type="button"
+                            title="Display As Grid"
+                            aria-pressed={viewMode === 'grid'}
+                            className={'header-bar-button' + (viewMode === 'grid' ? ' active' : '')}
+                            onClick={() => setViewMode('grid')}
+                        >
+                            <i className="material-icons">grid_view</i>
+                        </button>
+                    </div>
+
+                    {/* Hidden Files Toggle */}
+                    <div className="header-bar-button-group">
+                        <button
+                            type="button"
+                            title={showDotfiles ? 'Hide dotfiles' : 'Show dotfiles'}
+                            aria-label={showDotfiles ? 'Hide dotfiles' : 'Show dotfiles'}
+                            aria-pressed={showDotfiles}
+                            className={'header-bar-button' + (showDotfiles ? ' active' : '')}
+                            onClick={toggleDotfiles}
+                        >
+                            <i className="material-icons">
+                                {showDotfiles ? 'visibility' : 'visibility_off'}
+                            </i>
+                        </button>
+                    </div>
                 </div>
             </div>
 

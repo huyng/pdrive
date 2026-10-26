@@ -57,3 +57,11 @@ export function basename(path) {
     const parts = path.split('/')
     return parts[parts.length - 1]
 }
+
+export function isDotfile(node) {
+    return node.name.startsWith('.')
+}
+
+export function withoutDotfiles(nodes) {
+    return nodes.filter((node) => !isDotfile(node))
+}

@@ -41,6 +41,12 @@ body {
     justify-content: space-between;
 }
 
+.header-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
 .header-bar-button-group {
     display: flex;
     gap: 6px;
