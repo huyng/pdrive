@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import ContextMenu from './components/ContextMenu.jsx'
 import Dropdown from './components/Dropdown.jsx'
@@ -25,6 +25,35 @@ import PromptDialog from './components/PromptDialog.jsx'
 import UploadOverlay from './components/UploadOverlay.jsx'
 import { fetchListing, postCommand, uploadFile } from './api.js'
 import { basename, sortNodes } from './utils.js'
+
+// The current directory is mirrored into the URL hash so that the browser's
+// back/forward buttons (and their keyboard shortcuts) move between visited
+// directories. A hash is used instead of a real path because the backend only
+// serves index.html from "/".
+const PATH_HASH_PREFIX = '#path='
+
+function pathFromLocation() {
+    const { hash } = window.location
+    if (!hash.startsWith(PATH_HASH_PREFIX)) {
+        return null
+    }
+    try {
+        return decodeURIComponent(hash.slice(PATH_HASH_PREFIX.length)) || null
+    } catch (err) {
+        return null
+    }
+}
+
+function writeLocationPath(path, { replace = false } = {}) {
+    const url = path
+        ? PATH_HASH_PREFIX + encodeURIComponent(path)
+        : window.location.pathname + window.location.search
+    if (replace) {
+        window.history.replaceState({ path }, '', url)
+    } else {
+        window.history.pushState({ path }, '', url)
+    }
+}
 
 export default function App() {
     const [basedir, setBasedir] = useState('')
@@ -78,28 +107,75 @@ export default function App() {
         setNodes(data.nodes.map((node) => ({ ...node, isSelected: false })))
     }, [])
 
-    // the equivalent of the old Vue component's `created` hook
-    useEffect(() => {
-        let cancelled = false
-        fetchListing()
-            .then((data) => {
-                if (!cancelled) {
-                    applyListing(data)
-                }
-            })
-            .catch((err) => console.error('could not load listing', err))
-        return () => {
-            cancelled = true
+    // Monotonic id so that a slow response from an older navigation can never
+    // overwrite the directory the user is currently looking at.
+    const navigationId = useRef(0)
+
+    const loadDirectory = useCallback(async (path) => {
+        const id = ++navigationId.current
+        try {
+            const data = path
+                ? await postCommand({ command: 'ls', path })
+                : await fetchListing()
+            if (id !== navigationId.current) {
+                return null
+            }
+            applyListing(data)
+            return data
+        } catch (err) {
+            if (id === navigationId.current) {
+                console.error('could not load listing for', path, err)
+            }
+            return null
         }
     }, [applyListing])
 
-    const openFolder = useCallback(async (path) => {
-        try {
-            applyListing(await postCommand({ command: 'ls', path }))
-        } catch (err) {
-            console.error('could not open folder', path, err)
+    // the equivalent of the old Vue component's `created` hook, plus the
+    // browser history integration that powers back/forward navigation
+    useEffect(() => {
+        const restoreDirectory = async () => {
+            const path = pathFromLocation()
+            const data = await loadDirectory(path)
+            if (!data && path) {
+                // the directory we were asked for is gone (or unreadable),
+                // fall back to the base directory
+                const fallback = await loadDirectory(null)
+                if (fallback) {
+                    writeLocationPath(fallback.cwd, { replace: true })
+                }
+                return
+            }
+            // the entry that loaded the app should already point at the
+            // directory being displayed, so back doesn't leave the app
+            if (data) {
+                writeLocationPath(data.cwd, { replace: true })
+            }
         }
-    }, [applyListing])
+
+        const handlePopState = () => {
+            const path = pathFromLocation()
+            loadDirectory(path).then((data) => {
+                if (!data && path) {
+                    loadDirectory(null).then((fallback) => {
+                        if (fallback) {
+                            writeLocationPath(fallback.cwd, { replace: true })
+                        }
+                    })
+                }
+            })
+        }
+
+        restoreDirectory()
+        window.addEventListener('popstate', handlePopState)
+        return () => window.removeEventListener('popstate', handlePopState)
+    }, [loadDirectory])
+
+    const openFolder = useCallback(async (path) => {
+        const data = await loadDirectory(path)
+        if (data && data.cwd !== pathFromLocation()) {
+            writeLocationPath(data.cwd)
+        }
+    }, [loadDirectory])
 
     const clearSelection = useCallback(() => {
         setNodes((prev) => prev.map((node) => (
