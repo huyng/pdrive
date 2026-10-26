@@ -107,6 +107,8 @@ def api():
 @app.route("/serve")
 def serve_file():
     fpath = request.args.get("file")
+    if not fpath or not os.path.isfile(fpath):
+        return make_response("file not found", 404)
     response = send_file(fpath)
     return response
 
@@ -114,6 +116,8 @@ def serve_file():
 @app.route("/download")
 def download_file():
     fpath = request.args.get("file")
+    if not fpath or not os.path.isfile(fpath):
+        return make_response("file not found", 404)
     name = os.path.split(fpath)[1]
     response = send_file(fpath)
     response.headers['Content-Disposition'] = "attachment; filename=%s" % name

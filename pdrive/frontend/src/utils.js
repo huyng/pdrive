@@ -65,3 +65,66 @@ export function isDotfile(node) {
 export function withoutDotfiles(nodes) {
     return nodes.filter((node) => !isDotfile(node))
 }
+
+// ---------------------------------------------------------------------------
+// File previews
+// ---------------------------------------------------------------------------
+
+// `mimetypes.guess_type` returns None for a lot of plain text files (dotfiles,
+// extensionless scripts, ...), so those are also matched by name/extension.
+const TEXT_EXTENSIONS = new Set([
+    'txt', 'text', 'md', 'markdown', 'rst', 'log', 'csv', 'tsv', 'diff', 'patch',
+    'json', 'json5', 'jsonc', 'yml', 'yaml', 'toml', 'ini', 'cfg', 'conf',
+    'env', 'gitignore', 'gitattributes', 'npmrc', 'bashrc', 'zshrc', 'editorconfig',
+    'sh', 'bash', 'zsh', 'fish', 'bat', 'ps1', 'sql', 'graphql',
+    'py', 'js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'vue', 'svelte',
+    'css', 'scss', 'sass', 'less', 'html', 'htm', 'xml',
+    'c', 'h', 'cc', 'cpp', 'hpp', 'cs', 'java', 'kt', 'go', 'rs', 'rb', 'php',
+    'pl', 'lua', 'swift', 'scala', 'r', 'jl', 'ex', 'exs', 'erl', 'hs', 'clj',
+    'tex', 'bib', 'mk', 'cmake', 'properties', 'gradle', 'dockerfile', 'makefile',
+])
+
+const TEXT_FILENAMES = new Set([
+    'dockerfile', 'makefile', 'license', 'readme', 'changelog', 'authors',
+    'notice', 'procfile', 'gemfile', 'rakefile', 'vagrantfile', 'todo',
+])
+
+const TEXT_MIMETYPES = new Set([
+    'application/json', 'application/xml', 'application/javascript',
+    'application/x-javascript', 'application/x-sh', 'application/x-httpd-php',
+    'application/x-yaml', 'application/yaml', 'application/toml',
+])
+
+function extensionOf(name) {
+    const index = name.lastIndexOf('.')
+    return index === -1 ? '' : name.slice(index + 1).toLowerCase()
+}
+
+// How a node should be rendered by the preview dialog: image, pdf, video,
+// audio, text, or unsupported (download only).
+export function previewKind(node) {
+    if (!node || node.type !== 'file') {
+        return 'unsupported'
+    }
+    const mimetype = node.mimetype || ''
+    if (mimetype.startsWith('image/')) {
+        return 'image'
+    }
+    if (mimetype === 'application/pdf') {
+        return 'pdf'
+    }
+    if (mimetype.startsWith('video/')) {
+        return 'video'
+    }
+    if (mimetype.startsWith('audio/')) {
+        return 'audio'
+    }
+    if (mimetype.startsWith('text/') || TEXT_MIMETYPES.has(mimetype)) {
+        return 'text'
+    }
+    const name = node.name.toLowerCase()
+    if (TEXT_FILENAMES.has(name) || TEXT_EXTENSIONS.has(extensionOf(name))) {
+        return 'text'
+    }
+    return 'unsupported'
+}

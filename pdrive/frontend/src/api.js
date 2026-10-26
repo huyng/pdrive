@@ -28,6 +28,48 @@ export async function fetchListing() {
     return parseJson(await fetch('/api'))
 }
 
+// Inline file URLs. The path is encoded: file names routinely contain spaces,
+// '#', '?' and '&', all of which would otherwise break the query string.
+export function serveUrl(path) {
+    return '/serve?file=' + encodeURIComponent(path)
+}
+
+export function downloadUrl(path) {
+    return '/download?file=' + encodeURIComponent(path)
+}
+
+const TEXT_PREVIEW_MAX_BYTES = 64 * 1024
+
+// Reads the beginning of a file for the text preview. A Range request is used
+// so that huge files (logs!) never get pulled into the browser in full.
+export async function fetchTextPreview(path, maxBytes = TEXT_PREVIEW_MAX_BYTES) {
+    const response = await fetch(serveUrl(path), {
+        headers: { Range: 'bytes=0-' + (maxBytes - 1) },
+    })
+    if (!response.ok) {
+        throw new Error(`${response.status} ${response.statusText}`)
+    }
+
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    // a NUL byte in the first kilobyte is a good enough "not text" signal
+    const binary = bytes.subarray(0, 1024).includes(0)
+
+    let total = null
+    const contentRange = response.headers.get('Content-Range')  // bytes 0-65535/123456
+    if (contentRange) {
+        const parsed = Number(contentRange.split('/')[1])
+        total = Number.isFinite(parsed) ? parsed : null
+    }
+
+    return {
+        text: binary ? '' : new TextDecoder('utf-8').decode(bytes),
+        binary,
+        truncated: total !== null && total > bytes.length,
+        shownBytes: bytes.length,
+        totalBytes: total,
+    }
+}
+
 // POST /api with a JSON payload describing a filesystem command
 // (ls, rm, mv, cp, mkdir). The backend reads it from the `payload` form field.
 export async function postCommand(payload) {

@@ -21,10 +21,11 @@ import Dropdown from './components/Dropdown.jsx'
 import FileGrid from './components/FileGrid.jsx'
 import FileList from './components/FileList.jsx'
 import JobProgressPanel from './components/JobProgressPanel.jsx'
+import PreviewDialog from './components/PreviewDialog.jsx'
 import PromptDialog from './components/PromptDialog.jsx'
 import UploadOverlay from './components/UploadOverlay.jsx'
-import { fetchListing, postCommand, uploadFile } from './api.js'
-import { basename, isDotfile, sortNodes, withoutDotfiles } from './utils.js'
+import { downloadUrl, fetchListing, postCommand, serveUrl, uploadFile } from './api.js'
+import { basename, isDotfile, previewKind, sortNodes, withoutDotfiles } from './utils.js'
 
 // The current directory is mirrored into the URL hash so that the browser's
 // back/forward buttons (and their keyboard shortcuts) move between visited
@@ -69,6 +70,7 @@ export default function App() {
     const [renameDialog, setRenameDialog] = useState({ visible: false, node: null, value: '' })
     const [copyDialog, setCopyDialog] = useState({ visible: false, node: null, value: '' })
     const [newFolderDialog, setNewFolderDialog] = useState({ visible: false, value: '' })
+    const [preview, setPreview] = useState({ open: false, node: null })
 
     const [overlayVisible, setOverlayVisible] = useState(false)
     const [jobProgress, setJobProgress] = useState({ visible: false, tasks: [] })
@@ -78,6 +80,16 @@ export default function App() {
     ), [nodes, showDotfiles])
     const sortedNodes = useMemo(() => sortNodes(visibleNodes, sort), [visibleNodes, sort])
     const selectedNodes = useMemo(() => visibleNodes.filter((node) => node.isSelected), [visibleNodes])
+
+    // The files the preview dialog can show, in the order they appear on screen;
+    // used for the prev/next arrows.
+    const previewableNodes = useMemo(
+        () => sortedNodes.filter((node) => previewKind(node) !== 'unsupported'),
+        [sortedNodes],
+    )
+    const previewIndex = preview.node
+        ? previewableNodes.findIndex((node) => node.path === preview.node.path)
+        : -1
 
     const pathSegments = useMemo(() => {
         if (!cwd) {
@@ -98,7 +110,7 @@ export default function App() {
         // Duplicate / rename / download only make sense for a single selection
         const single = selectedNodes.length <= 1
         return {
-            preview: single,
+            preview: selectedNodes.length === 1,
             copy: single,
             rename: single,
             download: single,
@@ -196,6 +208,75 @@ export default function App() {
         }
     }, [loadDirectory])
 
+    // ---------------------------------------------------------------------
+    // File preview
+    // ---------------------------------------------------------------------
+
+    const openPreview = useCallback((node) => {
+        if (!node) {
+            return
+        }
+        if (node.type === 'dir') {
+            openFolder(node.path)
+            return
+        }
+        setPreview({ open: true, node })
+    }, [openFolder])
+
+    const closePreview = useCallback(() => setPreview({ open: false, node: null }), [])
+
+    const showPreviewNeighbor = useCallback((offset) => {
+        setPreview((prev) => {
+            if (!prev.node) {
+                return prev
+            }
+            const index = previewableNodes.findIndex((node) => node.path === prev.node.path)
+            const neighbor = previewableNodes[index + offset]
+            return neighbor ? { open: true, node: neighbor } : prev
+        })
+    }, [previewableNodes])
+
+    const handlePreviewPrev = useCallback(() => showPreviewNeighbor(-1), [showPreviewNeighbor])
+    const handlePreviewNext = useCallback(() => showPreviewNeighbor(1), [showPreviewNeighbor])
+
+    const handlePreviewDownload = useCallback(() => {
+        if (preview.node) {
+            window.open(downloadUrl(preview.node.path))
+        }
+    }, [preview.node])
+
+    // space bar previews the selected file, the way Quick Look does
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.key !== ' ' && event.code !== 'Space') {
+                return
+            }
+            if (event.altKey || event.ctrlKey || event.metaKey) {
+                return
+            }
+            // leave typing and focused controls alone
+            const target = event.target
+            if (target instanceof HTMLElement && (
+                target.isContentEditable
+                || ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(target.tagName)
+            )) {
+                return
+            }
+            if (preview.open || selectedNodes.length !== 1) {
+                return
+            }
+            const node = selectedNodes[0]
+            if (node.type !== 'file') {
+                return
+            }
+            event.preventDefault()  // don't scroll the listing
+            setMenu((prev) => ({ ...prev, visible: false }))
+            openPreview(node)
+        }
+        document.addEventListener('keydown', handleKeyDown)
+        return () => document.removeEventListener('keydown', handleKeyDown)
+    }, [openPreview, preview.open, selectedNodes])
+
     const clearSelection = useCallback(() => {
         setNodes((prev) => prev.map((node) => (
             node.isSelected ? { ...node, isSelected: false } : node
@@ -261,7 +342,9 @@ export default function App() {
 
     const handleRowDoubleClick = useCallback((row) => {
         if (row.type === 'file') {
-            window.open('/serve?file=' + row.path)
+            // Hand the file to the browser: it displays what it can and
+            // downloads everything else (pressing space previews instead)
+            window.open(serveUrl(row.path))
         } else {
             openFolder(row.path)
         }
@@ -293,6 +376,10 @@ export default function App() {
     // Contextual menu commands
     // ---------------------------------------------------------------------
 
+    const handlePreviewContextualMenu = useCallback(() => {
+        openPreview(selectedNodes[0])
+    }, [openPreview, selectedNodes])
+
     const handleCopyContextualMenu = useCallback(() => {
         const node = selectedNodes[0]
         if (!node) {
@@ -314,7 +401,7 @@ export default function App() {
             alert('Sorry, downloading multiple files at once is not enabled')
             return
         }
-        window.open('/download?file=' + selectedNodes[0].path)
+        window.open(downloadUrl(selectedNodes[0].path))
     }, [selectedNodes])
 
     const handleDeleteContextualMenu = useCallback(async () => {
@@ -500,6 +587,7 @@ export default function App() {
                 x={menu.x}
                 y={menu.y}
                 visibility={menuVisibility}
+                onPreview={handlePreviewContextualMenu}
                 onCopy={handleCopyContextualMenu}
                 onRename={handleRenameContextualMenu}
                 onDownload={handleDownloadContextualMenu}
@@ -535,6 +623,17 @@ export default function App() {
                 onChange={(value) => setNewFolderDialog((prev) => ({ ...prev, value }))}
                 onConfirm={confirmNewFolder}
                 onCancel={() => setNewFolderDialog({ visible: false, value: '' })}
+            />
+
+            <PreviewDialog
+                open={preview.open}
+                node={preview.node}
+                onClose={closePreview}
+                onDownload={handlePreviewDownload}
+                onPrev={handlePreviewPrev}
+                onNext={handlePreviewNext}
+                hasPrev={previewIndex > 0}
+                hasNext={previewIndex >= 0 && previewIndex < previewableNodes.length - 1}
             />
 
             {/* Header Bar */}

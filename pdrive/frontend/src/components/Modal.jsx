@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom'
 
 // Minimal modal dialog: rendered into document.body, closes on Escape or on a
 // click on the backdrop.
-export default function Modal({ open, title, onClose, footer, children }) {
+export default function Modal({ open, title, onClose, footer, className, children }) {
     // keep the latest callback without re-running the effect below: it must not
     // re-run on every render, or the cleanup would steal focus from the dialog
     const onCloseRef = useRef(onClose)
@@ -47,7 +47,7 @@ export default function Modal({ open, title, onClose, footer, children }) {
 
     return createPortal(
         <div className="modal-backdrop" onMouseDown={handleBackdropMouseDown}>
-            <div className="modal" role="dialog" aria-modal="true" aria-label={title}>
+            <div className={'modal' + (className ? ' ' + className : '')} role="dialog" aria-modal="true" aria-label={title}>
                 <div className="modal-header">
                     <h2 className="modal-title">{title}</h2>
                 </div>
