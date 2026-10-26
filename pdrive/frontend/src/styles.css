@@ -307,14 +307,34 @@ body {
     padding: 10px 10px;
     border-right: 1px solid #1F2D3D;
     flex: 1;
+    /* the trail is one line and scrolls horizontally when it gets long */
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    white-space: nowrap;
+}
+
+.breadcrumb-view::-webkit-scrollbar {
+    display: none;
 }
 
 .breadcrumb-view .segment {
+    border-radius: 3px;
     cursor: pointer;
+    padding: 2px 4px;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+}
+
+.breadcrumb-view .segment:hover {
+    background: rgba(255, 255, 255, .12);
+}
+
+.breadcrumb-view .material-icons {
+    vertical-align: middle;
 }
 
 .new-button-view {
@@ -396,7 +416,7 @@ body {
     text-align: center;
     font-size: .8em;
     overflow-x: hidden;
-    transition: background-color .1s ease-in-out;
+    transition: background-color .05s ease-in-out;
 }
 
 .grid-view .grid-item:hover .filename {
@@ -430,7 +450,7 @@ table tr.selected {
 }
 
 table tbody tr {
-    transition: background-color .1s ease-in-out;
+    transition: background-color .05s ease-in-out;
 }
 
 /* Light gray highlight on hover, without dimming the selected row */

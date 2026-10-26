@@ -112,20 +112,29 @@ export default function App() {
         onClickCapture: handleSelectionClickCapture,
     } = useDragSelect({ selectedPaths, onSelect: handleMarqueeSelect })
 
+    // Every component of the current path gets its own crumb, all the way up to
+    // the filesystem root, so any ancestor directory can be reached in one click.
     const pathSegments = useMemo(() => {
         if (!cwd) {
             return []
         }
-        const relativeCwd = cwd.replace(basedir, '')
-        const components = relativeCwd.split('/').filter((segment) => segment !== '')
-        const segments = [{ name: basedir, component: '', path: basedir }]
-        let fullPath = basedir
-        components.forEach((component) => {
+        const segments = [{ name: '/', path: '/' }]
+        let fullPath = ''
+        cwd.split('/').filter((component) => component !== '').forEach((component) => {
             fullPath += '/' + component
-            segments.push({ name: component, component, path: fullPath })
+            segments.push({ name: component, path: fullPath })
         })
         return segments
-    }, [cwd, basedir])
+    }, [cwd])
+
+    // Long trails scroll; keep the current directory (the right end) in view.
+    const breadcrumbRef = useRef(null)
+    useEffect(() => {
+        const element = breadcrumbRef.current
+        if (element) {
+            element.scrollLeft = element.scrollWidth
+        }
+    }, [cwd])
 
     const menuVisibility = useMemo(() => {
         // Duplicate / rename / download only make sense for a single selection
@@ -741,7 +750,7 @@ export default function App() {
                 <div className="content-view">
                     {/* Sub Header Bar */}
                     <div className="toolbar-view">
-                        <div className="breadcrumb-view">
+                        <div className="breadcrumb-view" ref={breadcrumbRef}>
                             {pathSegments.map((segment, index) => (
                                 <span key={segment.path}>
                                     <span className="segment" onClick={() => handleSegmentClick(segment)}>
