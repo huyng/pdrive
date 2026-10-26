@@ -17,7 +17,7 @@ keywords = [
     "file-manager",
     "file-browser",
     "flask",
-    "vue",
+    "react",
     "web",
 ]
 classifiers = [
@@ -52,11 +52,11 @@ pdrive = "pdrive.backend.web:main"
 # ---------------------------------------------------------------------------
 # Build configuration
 # ---------------------------------------------------------------------------
-# The Python sources live in the `pdrive` package, while the pre-built Vue
+# The Python sources live in the `pdrive` package, while the pre-built React
 # frontend is shipped as package data under `pdrive/frontend/dist`.
 [tool.hatch.build]
-# The root .gitignore ignores `dist` (and thus the pre-built UI assets), so
-# rely on the explicit include/exclude lists below instead of VCS patterns.
+# Use the explicit include/exclude lists below rather than VCS ignore rules so
+# that the pre-built UI in `pdrive/frontend/dist` is always packaged.
 ignore-vcs = true
 
 [tool.hatch.build.targets.wheel]
@@ -67,7 +67,6 @@ exclude = [
     "pdrive/frontend/package.json",
     "pdrive/frontend/package-lock.json",
     "pdrive/frontend/README.md",
-    "pdrive/frontend/babel.config.js",
     "pdrive/frontend/vite.config.js",
     "pdrive/frontend/.gitignore",
     "**/__pycache__",

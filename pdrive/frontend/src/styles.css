@@ -1,0 +1,488 @@
+/* pdrive - a web based document browser
+   Copyright (C) 2017 Huy Nguyen
+   Licensed under the GNU General Public License v3 or later. See LICENSE. */
+
+* {
+    margin: 0px;
+    padding: 0px;
+}
+
+body {
+    background: white;
+    font-family: "Avenir", "Arial", sans-serif;
+}
+
+.app {
+    height: 100%;
+}
+
+.noselect {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.logo-mark {
+    font-size: 24px;
+    color: white;
+}
+
+/* Header bar */
+
+.header-bar {
+    background: #20A0FF;
+    padding: 16px 20px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.header-bar-button-group {
+    display: flex;
+    gap: 6px;
+}
+
+.header-bar-button {
+    background-color: #285688F1;
+    border: 1px solid #28568821;
+    color: #345;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 6px 10px;
+    line-height: 1;
+}
+
+.header-bar-button:hover {
+    background-color: #285688AA;
+}
+
+.header-bar-button.active {
+    background-color: #28568861;
+    color: white;
+}
+
+.header-bar-button .material-icons {
+    font-size: 20px;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+/* Buttons */
+
+.btn {
+    background: white;
+    border: 1px solid #DCDFE6;
+    border-radius: 4px;
+    color: #606266;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 16px;
+    transition: background-color .15s, border-color .15s, color .15s;
+}
+
+.btn:hover {
+    background: #ECF5FF;
+    border-color: #C6E2FF;
+    color: #409EFF;
+}
+
+.btn:focus-visible {
+    outline: 2px solid #409EFF;
+    outline-offset: 1px;
+}
+
+.btn-primary {
+    background: #409EFF;
+    border-color: #409EFF;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #66B1FF;
+    border-color: #66B1FF;
+    color: white;
+}
+
+/* Text input */
+
+.text-input {
+    border: 1px solid #DCDFE6;
+    border-radius: 4px;
+    box-sizing: border-box;
+    color: #606266;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 11px;
+    width: 100%;
+}
+
+.text-input:focus {
+    border-color: #409EFF;
+    outline: none;
+}
+
+/* Modal dialog */
+
+.modal-backdrop {
+    align-items: center;
+    background: rgba(0, 0, 0, .5);
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    left: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 1000;
+}
+
+.modal {
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+    max-width: calc(100vw - 32px);
+    width: 420px;
+}
+
+.modal-header {
+    padding: 20px 20px 0;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 0 20px 20px;
+}
+
+/* Dropdown menu */
+
+.dropdown {
+    display: inline-block;
+    position: relative;
+}
+
+.dropdown-menu {
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, .15);
+    list-style: none;
+    min-width: 170px;
+    padding: 6px 0;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 1000;
+}
+
+.dropdown-menu button {
+    align-items: center;
+    background: none;
+    border: 0;
+    color: #606266;
+    cursor: pointer;
+    display: flex;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 9px 16px;
+    text-align: left;
+    width: 100%;
+}
+
+.dropdown-menu button:hover,
+.dropdown-menu button:focus-visible {
+    background: #ECF5FF;
+    color: #409EFF;
+    outline: none;
+}
+
+/* Progress bar */
+
+.progress {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.progress-bar {
+    background: #EBEEF5;
+    border-radius: 3px;
+    flex: 1;
+    height: 6px;
+    overflow: hidden;
+}
+
+.progress-inner {
+    background: #409EFF;
+    height: 100%;
+    transition: width .2s;
+}
+
+.progress-text {
+    color: #606266;
+    font-size: 12px;
+    min-width: 34px;
+    text-align: right;
+}
+
+/* Upload overlay */
+
+.upload-overlay {
+    position: fixed;
+    bottom: 0;
+    right: 0px;
+    background-color: rgba(0, 0, 0, .9);
+    z-index: 999;
+    padding: 20px;
+    left: 0px;
+    top: 0px;
+}
+
+.upload-overlay-message {
+    position: relative;
+    margin: 100px auto;
+    width: 400px;
+    padding: 20px;
+    color: white;
+    text-align: center;
+    font-size: 24px;
+}
+
+/* Upload progress */
+
+.job-progress {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 300px;
+    background-color: white;
+    box-shadow: 0px 2px 6px #999;
+    z-index: 999;
+}
+
+.job-progress-header {
+    background: #8492A6;
+    padding: 10px 20px;
+    color: white;
+}
+
+.job-progress-task {
+    padding: 20px;
+    font-size: 12px;
+}
+
+/* Toolbar and breadcrumbs */
+
+.toolbar-view {
+    background: #324057;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.breadcrumb-view {
+    padding: 16px 20px;
+    border-right: 1px solid #1F2D3D;
+    flex: 1;
+}
+
+.breadcrumb-view .segment {
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.new-button-view {
+    margin-right: 20px;
+}
+
+.new-button {
+    margin-top: 8px;
+    margin-left: 16px;
+}
+
+.new-button .material-icons {
+    vertical-align: middle;
+}
+
+.new-menu-icon {
+    vertical-align: text-bottom;
+    margin-right: 6px;
+}
+
+/* Contextual menu */
+
+.contextual-menu {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 200px;
+    background: white;
+    z-index: 999;
+    font-size: 1em;
+    box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.5);
+}
+
+.contextual-menu div {
+    padding: 10px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.contextual-menu div:hover {
+    background: #E5E9F2;
+    cursor: pointer;
+}
+
+.contextual-menu div:active {
+    background: #1D8CE0;
+    color: white;
+}
+
+.contextual-menu .contextual-menu-separator {
+    border-top: 2px solid #E5E9F2;
+}
+
+/* Grid View Styles */
+
+.grid-view {
+    overflow: hidden;
+}
+
+.grid-view .grid-item {
+    float: left;
+    width: 100px;
+    margin: 30px;
+}
+
+.grid-item-preview {
+    text-align: center;
+    padding-bottom: 10px;
+    height: 100px;
+    vertical-align: middle;
+}
+
+.grid-view .grid-item .filename {
+    border-radius: 4px;
+    padding: 4px;
+    text-align: center;
+    font-size: .8em;
+    overflow-x: hidden;
+}
+
+.grid-view .grid-item.selected .filename {
+    background: #5858ff;
+    color: white;
+    overflow-x: hidden;
+}
+
+/* Table styles */
+
+table {
+    width: 100%;
+    display: table;
+    border-collapse: collapse;
+    border-spacing: 0;
+    box-sizing: content-box;
+    font-size: 14px;
+}
+
+table thead {
+    background: #EFF2F7;
+}
+
+table tr.selected {
+    background: #58B7FF;
+    color: white;
+}
+
+table td {
+    height: 40px;
+    border-bottom: 1px solid #e0e6ed;
+    padding-left: 18px;
+    padding-right: 18px;
+    cursor: default;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+table th {
+    border-bottom: 1px solid #e0e6ed;
+    white-space: nowrap;
+    overflow: hidden;
+    background-color: #EFF2F7;
+    text-align: left;
+    height: 40px;
+    padding-left: 18px;
+    padding-right: 18px;
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Rules for sizing the icon. */
+
+.material-icons {
+    vertical-align: top;
+}
+
+.material-icons.md-18 {
+    font-size: 18px;
+}
+
+.material-icons.md-24 {
+    font-size: 24px;
+}
+
+.material-icons.md-36 {
+    font-size: 36px;
+}
+
+.material-icons.md-48 {
+    font-size: 48px;
+}
+
+/* Rules for using icons as black on a light background. */
+
+.material-icons.md-dark {
+    color: rgba(0, 0, 0, 0.3);
+}
+
+.material-icons.md-dark.md-inactive {
+    color: rgba(0, 0, 0, 0.26);
+}
+
+/* Rules for using icons as white on a dark background. */
+
+.material-icons.md-light {
+    color: rgba(255, 255, 255, 1);
+}
+
+.material-icons.md-light.md-inactive {
+    color: rgba(255, 255, 255, 0.3);
+}

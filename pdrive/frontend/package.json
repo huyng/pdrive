@@ -1,24 +1,22 @@
 {
   "name": "pdrive-ui",
   "version": "0.6.0",
-  "description": "A Vue.js project",
+  "description": "pdrive web UI (React)",
   "author": "huy",
+  "license": "GPL-3.0-or-later",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@element-plus/icons": "^0.0.11",
-    "@element-plus/icons-vue": "^2.3.1",
-    "element-plus": "latest",
-    "jquery": "latest",
-    "vue": "^3.4.21",
-    "vue-router": "^4.3.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.0.4",
-    "vite": "^5.2.8"
+    "@vitejs/plugin-react": "^5.2.0",
+    "vite": "^7.3.7"
   }
 }
