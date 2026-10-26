@@ -617,3 +617,23 @@ audio.preview-media {
     color: #C0CCDA;
     cursor: default;
 }
+
+/* Drag to select */
+
+.selection-surface {
+    min-height: 1px;
+}
+
+body.drag-selecting {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.selection-rect {
+    background: rgba(64, 158, 255, .12);
+    border: 1px solid #409EFF;
+    border-radius: 2px;
+    pointer-events: none;
+    position: fixed;
+    z-index: 900;
+}

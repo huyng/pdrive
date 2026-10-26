@@ -35,6 +35,7 @@ export default function FileList({ nodes, sort, onRowClick, onRowRightClick, onR
                 {nodes.map((node, index) => (
                     <tr
                         key={`${node.path}-${index}`}
+                        data-path={node.path}
                         className={node.isSelected ? 'selected' : undefined}
                         onClick={(event) => onRowClick(node, event)}
                         onContextMenu={(event) => onRowRightClick(node, event)}

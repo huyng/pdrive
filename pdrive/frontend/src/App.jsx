@@ -25,6 +25,7 @@ import PreviewDialog from './components/PreviewDialog.jsx'
 import PromptDialog from './components/PromptDialog.jsx'
 import UploadOverlay from './components/UploadOverlay.jsx'
 import { downloadUrl, fetchListing, postCommand, serveUrl, uploadFile } from './api.js'
+import useDragSelect from './useDragSelect.js'
 import { basename, isDotfile, previewKind, sortNodes, withoutDotfiles } from './utils.js'
 
 // The current directory is mirrored into the URL hash so that the browser's
@@ -90,6 +91,25 @@ export default function App() {
     const previewIndex = preview.node
         ? previewableNodes.findIndex((node) => node.path === preview.node.path)
         : -1
+
+    const selectedPaths = useMemo(() => selectedNodes.map((node) => node.path), [selectedNodes])
+
+    // Rubber-band selection: the hook reports every path the drag rectangle
+    // touches, this replaces (or extends, with meta/ctrl/shift) the selection.
+    const handleMarqueeSelect = useCallback((paths) => {
+        const selection = new Set(paths)
+        setNodes((prev) => prev.map((node) => {
+            const isSelected = selection.has(node.path)
+            return node.isSelected === isSelected ? node : { ...node, isSelected }
+        }))
+    }, [])
+
+    const {
+        containerRef: selectionRef,
+        marquee,
+        onMouseDown: handleSelectionMouseDown,
+        onClickCapture: handleSelectionClickCapture,
+    } = useDragSelect({ selectedPaths, onSelect: handleMarqueeSelect })
 
     const pathSegments = useMemo(() => {
         if (!cwd) {
@@ -713,23 +733,31 @@ export default function App() {
                         </div>
                     </div>
 
-                    {viewMode === 'grid' ? (
-                        <FileGrid
-                            nodes={sortedNodes}
-                            onRowClick={handleRowClick}
-                            onRowRightClick={handleRowRightClick}
-                            onRowDoubleClick={handleRowDoubleClick}
-                        />
-                    ) : (
-                        <FileList
-                            nodes={sortedNodes}
-                            sort={sort}
-                            onRowClick={handleRowClick}
-                            onRowRightClick={handleRowRightClick}
-                            onRowDoubleClick={handleRowDoubleClick}
-                            onToggleSort={toggleSort}
-                        />
-                    )}
+                    <div
+                        className="selection-surface"
+                        ref={selectionRef}
+                        onMouseDown={handleSelectionMouseDown}
+                        onClickCapture={handleSelectionClickCapture}
+                    >
+                        {viewMode === 'grid' ? (
+                            <FileGrid
+                                nodes={sortedNodes}
+                                onRowClick={handleRowClick}
+                                onRowRightClick={handleRowRightClick}
+                                onRowDoubleClick={handleRowDoubleClick}
+                            />
+                        ) : (
+                            <FileList
+                                nodes={sortedNodes}
+                                sort={sort}
+                                onRowClick={handleRowClick}
+                                onRowRightClick={handleRowRightClick}
+                                onRowDoubleClick={handleRowDoubleClick}
+                                onToggleSort={toggleSort}
+                            />
+                        )}
+                        {marquee && <div className="selection-rect" style={marquee} />}
+                    </div>
                 </div>
             </div>
         </div>

@@ -36,6 +36,7 @@ export default function FileGrid({ nodes, onRowClick, onRowRightClick, onRowDoub
             {nodes.map((node, index) => (
                 <div
                     key={`${node.path}-${index}`}
+                    data-path={node.path}
                     className={`grid-item${node.isSelected ? ' selected' : ''}`}
                     onClick={(event) => onRowClick(node, event)}
                     onContextMenu={(event) => onRowRightClick(node, event)}
