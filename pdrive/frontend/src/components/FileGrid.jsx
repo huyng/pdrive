@@ -30,14 +30,18 @@ function TilePreview({ node }) {
     )
 }
 
-export default function FileGrid({ nodes, onRowClick, onRowRightClick, onRowDoubleClick }) {
+export default function FileGrid({ nodes, dropTargetPath, onRowClick, onRowRightClick, onRowDoubleClick }) {
+    // Each tile is a move handle: dragging the icon or the name both start a
+    // drag to move, and the gaps between the tiles start a rubber-band select.
     return (
         <div className="grid-view noselect">
             {nodes.map((node, index) => (
                 <div
                     key={`${node.path}-${index}`}
                     data-path={node.path}
-                    className={`grid-item${node.isSelected ? ' selected' : ''}`}
+                    data-dir={node.type === 'dir' ? 'true' : undefined}
+                    data-drag-handle=""
+                    className={`grid-item${node.isSelected ? ' selected' : ''}${node.path === dropTargetPath ? ' drop-target' : ''}`}
                     onClick={(event) => onRowClick(node, event)}
                     onContextMenu={(event) => onRowRightClick(node, event)}
                     onDoubleClick={(event) => onRowDoubleClick(node, event)}

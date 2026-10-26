@@ -38,6 +38,10 @@ export default function useDragSelect({ selectedPaths, onSelect }) {
         if (target instanceof HTMLElement && target.closest('input, textarea, select, button, a')) {
             return
         }
+        // filenames start a move drag instead, see useDragMove
+        if (target instanceof HTMLElement && target.closest('[data-drag-handle]')) {
+            return
+        }
         dragRef.current = {
             startX: event.clientX,
             startY: event.clientY,

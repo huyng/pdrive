@@ -25,6 +25,7 @@ import PreviewDialog from './components/PreviewDialog.jsx'
 import PromptDialog from './components/PromptDialog.jsx'
 import UploadOverlay from './components/UploadOverlay.jsx'
 import { downloadUrl, fetchListing, postCommand, serveUrl, uploadFile } from './api.js'
+import useDragMove from './useDragMove.js'
 import useDragSelect from './useDragSelect.js'
 import { basename, isDotfile, previewKind, sortNodes, withoutDotfiles } from './utils.js'
 
@@ -227,6 +228,41 @@ export default function App() {
             writeLocationPath(data.cwd)
         }
     }, [loadDirectory])
+
+    // ---------------------------------------------------------------------
+    // Drag to move
+    // ---------------------------------------------------------------------
+
+    // Drag the selected rows (or just the row whose filename was grabbed) onto
+    // a folder to move them there.
+    const handleMoveNodes = useCallback(async (paths, destination) => {
+        try {
+            await postCommand({ command: 'mv', paths, destination })
+        } catch (err) {
+            console.error('could not move', paths, 'to', destination, err)
+            return
+        }
+        await loadDirectory(cwd)
+    }, [cwd, loadDirectory])
+
+    const {
+        ghost: moveGhost,
+        dropTargetPath,
+        onMouseDown: handleMoveMouseDown,
+        onClickCapture: handleMoveClickCapture,
+    } = useDragMove({ containerRef: selectionRef, selectedPaths, onMove: handleMoveNodes })
+
+    // The surface is shared by both drag gestures: the move hook only reacts to
+    // mousedowns on a filename, the rubber band only to everything else.
+    const handleSurfaceMouseDown = useCallback((event) => {
+        handleMoveMouseDown(event)
+        handleSelectionMouseDown(event)
+    }, [handleMoveMouseDown, handleSelectionMouseDown])
+
+    const handleSurfaceClickCapture = useCallback((event) => {
+        handleMoveClickCapture(event)
+        handleSelectionClickCapture(event)
+    }, [handleMoveClickCapture, handleSelectionClickCapture])
 
     // ---------------------------------------------------------------------
     // File preview
@@ -736,12 +772,13 @@ export default function App() {
                     <div
                         className="selection-surface"
                         ref={selectionRef}
-                        onMouseDown={handleSelectionMouseDown}
-                        onClickCapture={handleSelectionClickCapture}
+                        onMouseDown={handleSurfaceMouseDown}
+                        onClickCapture={handleSurfaceClickCapture}
                     >
                         {viewMode === 'grid' ? (
                             <FileGrid
                                 nodes={sortedNodes}
+                                dropTargetPath={dropTargetPath}
                                 onRowClick={handleRowClick}
                                 onRowRightClick={handleRowRightClick}
                                 onRowDoubleClick={handleRowDoubleClick}
@@ -750,6 +787,7 @@ export default function App() {
                             <FileList
                                 nodes={sortedNodes}
                                 sort={sort}
+                                dropTargetPath={dropTargetPath}
                                 onRowClick={handleRowClick}
                                 onRowRightClick={handleRowRightClick}
                                 onRowDoubleClick={handleRowDoubleClick}
@@ -760,6 +798,12 @@ export default function App() {
                     </div>
                 </div>
             </div>
+
+            {moveGhost && (
+                <div className="drag-ghost" style={{ left: moveGhost.x + 12, top: moveGhost.y + 12 }}>
+                    {moveGhost.label}
+                </div>
+            )}
         </div>
     )
 }

@@ -15,7 +15,7 @@ function SortIcon({ column, sort }) {
     )
 }
 
-export default function FileList({ nodes, sort, onRowClick, onRowRightClick, onRowDoubleClick, onToggleSort }) {
+export default function FileList({ nodes, sort, dropTargetPath, onRowClick, onRowRightClick, onRowDoubleClick, onToggleSort }) {
     return (
         <table cellSpacing="0" cellPadding="0" border="0">
             <thead>
@@ -36,7 +36,8 @@ export default function FileList({ nodes, sort, onRowClick, onRowRightClick, onR
                     <tr
                         key={`${node.path}-${index}`}
                         data-path={node.path}
-                        className={node.isSelected ? 'selected' : undefined}
+                        data-dir={node.type === 'dir' ? 'true' : undefined}
+                        className={`${node.isSelected ? 'selected' : ''}${node.path === dropTargetPath ? ' drop-target' : ''}`.trim() || undefined}
                         onClick={(event) => onRowClick(node, event)}
                         onContextMenu={(event) => onRowRightClick(node, event)}
                         onDoubleClick={(event) => onRowDoubleClick(node, event)}
@@ -45,7 +46,7 @@ export default function FileList({ nodes, sort, onRowClick, onRowRightClick, onR
                             {node.type === 'dir'
                                 ? <i className="material-icons md-18">folder</i>
                                 : <i className="material-icons md-18 md-dark">insert_drive_file</i>}
-                            <span style={{ marginLeft: '10px' }}>{truncate(node.name, 40)}</span>
+                            <span data-drag-handle style={{ marginLeft: '10px' }}>{truncate(node.name, 40)}</span>
                         </td>
                         <td>{formatSize(node)}</td>
                         <td>{node.mtime}</td>
