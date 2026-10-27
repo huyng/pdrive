@@ -440,11 +440,11 @@ button {
 
 .grid-view {
     /* A real grid (instead of floats) keeps the files in fixed columns and
-       rows, no matter how tall an individual tile turns out to be. The 60px
-       gap reproduces the 30px margins the tiles used to carry. */
+       rows, no matter how tall an individual tile turns out to be. The 44px
+       gap is the 60px of the old floating layout pulled in a little tighter. */
     display: grid;
     grid-template-columns: repeat(auto-fill, 100px);
-    gap: 60px;
+    gap: 44px;
     padding: 30px;
     justify-content: start;
     align-content: start;
