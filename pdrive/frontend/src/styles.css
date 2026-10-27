@@ -76,7 +76,7 @@ button {
 
 .header-bar {
     background: #20A0FF;
-    padding: 6px 10px;
+    padding: 4px 10px;
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -101,7 +101,7 @@ button {
     color: #9ab;
     border-radius: 4px;
     cursor: pointer;
-    padding: 6px 10px;
+    padding: 5px 10px;
     line-height: 1;
 }
 
@@ -371,7 +371,7 @@ button {
 }
 
 .breadcrumb-view {
-    padding: 10px 10px;
+    padding: 8px 10px;
     border-right: 1px solid #1F2D3D;
     flex: 1;
     /* the trail is one line and scrolls horizontally when it gets long */
@@ -409,9 +409,10 @@ button {
 }
 
 .new-button {
-    margin-top: 8px;
-    margin-bottom: 8px;
-    margin-left: 16px;
+    /* the toolbar is only as tall as the breadcrumbs or this button, whichever
+       needs more, so its own margins set the height of the whole bar */
+    margin: 3px 0 3px 16px;
+    padding: 5px 14px;
 }
 
 .new-button .material-icons {
