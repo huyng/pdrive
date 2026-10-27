@@ -161,7 +161,12 @@ def download_file():
 def upload_file():
     fd = request.files['file']
     basedir = request.form["basedir"]
-    fpath = os.path.join(basedir, fd.filename)
+    if not os.path.isdir(basedir):
+        # the folder was removed or renamed between the listing and the drop
+        return json.dumps({"error": "no such directory"}), 400
+    # Only the base name is used: the folder is decided by where the file was
+    # dropped, and a name like "../x" must not be able to write outside it.
+    fpath = os.path.join(basedir, pth.basename(fd.filename))
     fd.save(fpath)
     node = process(fpath)
     return json.dumps(node)

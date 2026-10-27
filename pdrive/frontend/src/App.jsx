@@ -24,7 +24,7 @@ import FileList from './components/FileList.jsx'
 import JobProgressPanel from './components/JobProgressPanel.jsx'
 import PreviewDialog from './components/PreviewDialog.jsx'
 import PromptDialog from './components/PromptDialog.jsx'
-import UploadOverlay from './components/UploadOverlay.jsx'
+import UploadHint from './components/UploadHint.jsx'
 import { downloadUrl, fetchListing, postCommand, serveUrl, uploadFile } from './api.js'
 import useDragMove from './useDragMove.js'
 import useDragSelect from './useDragSelect.js'
@@ -84,7 +84,10 @@ export default function App() {
     const [deleteDialog, setDeleteDialog] = useState({ visible: false, paths: [] })
     const [preview, setPreview] = useState({ open: false, node: null })
 
-    const [overlayVisible, setOverlayVisible] = useState(false)
+    // Files dragged in from outside the browser: the hint follows the drag,
+    // `target` is the folder tile or row under the pointer, if any.
+    const [uploadDrag, setUploadDrag] = useState({ visible: false, target: null })
+    const filePickerRef = useRef(null)
     const [jobProgress, setJobProgress] = useState({ visible: false, tasks: [] })
 
     const visibleNodes = useMemo(() => (
@@ -907,7 +910,7 @@ export default function App() {
     }, [renameDialog])
 
     // ---------------------------------------------------------------------
-    // Uploads (drag and drop)
+    // Uploads (drag and drop, and the file picker)
     // ---------------------------------------------------------------------
 
     const removeTask = useCallback((taskId) => {
@@ -917,19 +920,52 @@ export default function App() {
         })
     }, [])
 
-    const uploadOne = useCallback((file) => {
-        const exists = nodes.some((node) => node.name === file.name)
-        if (exists && !window.confirm('File exists, do you want to overwrite: ' + file.name + '?')) {
+    // The folder row or tile under the pointer, or null over empty space. Hit
+    // testing goes through the DOM (not a drop handler on the tile) so that a
+    // drop anywhere in the window is handled in one place: the hint element is
+    // click-through, so the tile is still where the pointer says it is.
+    const folderUnderPointer = useCallback((x, y) => {
+        for (const element of document.elementsFromPoint(x, y)) {
+            const owner = element instanceof Element ? element.closest('[data-path][data-dir]') : null
+            if (owner) {
+                return owner.dataset.path
+            }
+        }
+        return null
+    }, [])
+
+    // A folder whose listing is already cached has to be fetched again after
+    // files were written into it; dropping the entry is enough, the expand
+    // effect picks it up.
+    const invalidateChildren = useCallback((path) => {
+        setChildListings((prev) => {
+            if (!prev.has(path)) {
+                return prev
+            }
+            const next = new Map(prev)
+            next.delete(path)
+            return next
+        })
+    }, [])
+
+    const uploadOne = useCallback((file, destination, existingNames) => {
+        if (existingNames.has(file.name)
+            && !window.confirm('File exists, do you want to overwrite: ' + file.name + '?')) {
             return
         }
 
+        const into = destination === cwd ? null : basename(destination)
         const taskId = `${Date.now()}-${Math.random().toString(16).slice(2)}`
         setJobProgress((prev) => ({
             visible: true,
-            tasks: [...prev.tasks, { id: taskId, message: file.name, progress: 0 }],
+            tasks: [...prev.tasks, {
+                id: taskId,
+                message: into ? `${into}/${file.name}` : file.name,
+                progress: 0,
+            }],
         }))
 
-        uploadFile(file, cwd, {
+        uploadFile(file, destination, {
             onProgress: (percent) => {
                 setJobProgress((prev) => ({
                     ...prev,
@@ -939,15 +975,20 @@ export default function App() {
                 }))
             },
             onDone: (node) => {
-                setNodes((prev) => {
-                    const index = prev.findIndex((n) => n.name === file.name)
-                    if (index === -1) {
-                        return [...prev, { ...node, isSelected: false }]
-                    }
-                    const next = [...prev]
-                    next[index] = { ...node, isSelected: prev[index].isSelected }
-                    return next
-                })
+                if (destination === cwd) {
+                    setNodes((prev) => {
+                        const index = prev.findIndex((n) => n.name === file.name)
+                        if (index === -1) {
+                            return [...prev, { ...node, isSelected: false }]
+                        }
+                        const next = [...prev]
+                        next[index] = { ...node, isSelected: prev[index].isSelected }
+                        return next
+                    })
+                } else {
+                    // the file is not in the directory on screen
+                    invalidateChildren(destination)
+                }
                 setTimeout(() => removeTask(taskId), 2000)
             },
             onError: (err) => {
@@ -955,34 +996,77 @@ export default function App() {
                 setTimeout(() => removeTask(taskId), 2000)
             },
         })
-    }, [cwd, nodes, removeTask])
+    }, [cwd, invalidateChildren, removeTask])
 
-    const handleDragEnter = useCallback((event) => {
+    // Upload a batch into one folder. Names already in that folder are the
+    // things an overwrite confirmation is about, so the destination is listed
+    // once first (the current directory does not need asking).
+    const uploadFiles = useCallback(async (files, destination) => {
+        if (files.length === 0) {
+            return
+        }
+        let existing = new Set(nodes.map((node) => node.name))
+        if (destination !== cwd) {
+            try {
+                const data = await postCommand({ command: 'ls', path: destination })
+                existing = new Set(data.nodes.map((node) => node.name))
+            } catch (err) {
+                // without the listing there is no way to tell whether a file
+                // would be overwritten, so nothing is written
+                console.error('could not list', destination, err)
+                return
+            }
+        }
+        files.forEach((file) => uploadOne(file, destination, existing))
+    }, [cwd, nodes, uploadOne])
+
+    // Only a drag carrying files is ours; dragging text or a link around the
+    // page must keep the browser's own behaviour.
+    const dragHasFiles = (event) => Array.from(event.dataTransfer?.types ?? []).includes('Files')
+
+    const handleDragOver = useCallback((event) => {
+        if (!dragHasFiles(event)) {
+            return
+        }
+        // without preventDefault the browser opens the file instead of dropping it
         event.preventDefault()
-        setOverlayVisible(true)
-    }, [])
+        event.dataTransfer.dropEffect = 'copy'
+        const target = folderUnderPointer(event.clientX, event.clientY)
+        setUploadDrag((prev) => (prev.visible && prev.target === target
+            ? prev
+            : { visible: true, target }))
+    }, [folderUnderPointer])
 
     const handleDragLeave = useCallback((event) => {
-        if (event.target === event.currentTarget) {
-            setOverlayVisible(false)
+        // fires for every element the drag crosses; only a move out of the
+        // window (nothing related) ends the drag
+        if (event.relatedTarget === null) {
+            setUploadDrag({ visible: false, target: null })
         }
     }, [])
 
     const handleDragDrop = useCallback((event) => {
+        if (!dragHasFiles(event)) {
+            return
+        }
         event.preventDefault()
-        event.stopPropagation()
-        const files = Array.from(event.dataTransfer?.files ?? [])
-        files.forEach((file) => uploadOne(file))
-        setOverlayVisible(false)
-    }, [uploadOne])
+        const destination = folderUnderPointer(event.clientX, event.clientY) || cwd
+        setUploadDrag({ visible: false, target: null })
+        uploadFiles(Array.from(event.dataTransfer.files), destination)
+    }, [cwd, folderUnderPointer, uploadFiles])
 
-    const closeOverlay = useCallback(() => setOverlayVisible(false), [])
+    const handleFilePickerChange = useCallback((event) => {
+        const files = Array.from(event.target.files ?? [])
+        // cleared so that picking the same file again still fires a change
+        event.target.value = ''
+        uploadFiles(files, cwd)
+    }, [cwd, uploadFiles])
 
     const handleNewMenuSelect = useCallback((key) => {
         if (key === 'folder') {
             handleNewFolderMenu()
         } else if (key === 'upload') {
-            setOverlayVisible(true)
+            filePickerRef.current?.click()
         }
     }, [handleNewFolderMenu])
 
@@ -999,15 +1083,19 @@ export default function App() {
         <div
             className="app"
             onClick={handleAppClick}
-            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
             onDrop={handleDragDrop}
         >
-            <UploadOverlay
-                visible={overlayVisible}
-                onClose={closeOverlay}
-                onDrop={handleDragDrop}
-                onDragLeave={handleDragLeave}
+            <input
+                ref={filePickerRef}
+                type="file"
+                multiple
+                hidden
+                onChange={handleFilePickerChange}
             />
+
+            <UploadHint visible={uploadDrag.visible} target={uploadDrag.target} />
 
             <JobProgressPanel
                 visible={jobProgress.visible}
@@ -1178,7 +1266,7 @@ export default function App() {
                         {viewMode === 'grid' ? (
                             <FileGrid
                                 nodes={sortedNodes}
-                                dropTargetPath={dropTargetPath}
+                                dropTargetPath={dropTargetPath || uploadDrag.target}
                                 onRowClick={handleRowClick}
                                 onRowRightClick={handleRowRightClick}
                                 onRowDoubleClick={handleRowDoubleClick}
@@ -1187,7 +1275,7 @@ export default function App() {
                             <FileList
                                 rows={listRows}
                                 sort={sort}
-                                dropTargetPath={dropTargetPath}
+                                dropTargetPath={dropTargetPath || uploadDrag.target}
                                 expandedPaths={expandedPaths}
                                 onToggleExpand={toggleExpanded}
                                 onRowClick={handleRowClick}

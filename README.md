@@ -1,10 +1,7 @@
 # pdrive
 
-pdrive is a browser-based document and file manager based on Python 3 and React. If you need a quick way of browsing files on a remote server, this is the tool for you.
+pdrive is a browser-based file manager. If you need a quick way of browsing files on a remote server, this is the tool for you.
 
-You can use it as a pretty alternative to `python -m http.server` or as a simple interface into a remote network-attached-storage drive.
-
-It's designed to combine the excellent usability of Google Drive with the benefits of having control over your own data.
 
 ![pdrive](https://user-images.githubusercontent.com/121183/87987433-7e86fb00-ca93-11ea-9236-14823d0650c2.gif)
 
@@ -12,7 +9,14 @@ It's designed to combine the excellent usability of Google Drive with the benefi
 ### Installation
 
 ```
+# If you want to install with pip
 pip install pdrive
+
+# Or if you want to install with uv
+uv tool install pdrive
+
+# Or you can even run the tool without installing using uv's uvx:
+uvx pdrive
 ```
 
 ### Usage
@@ -21,7 +25,7 @@ You can start a server for browsing or modifying a given directory with the foll
 
 ```
 cd /path/to/my/directory
-python -m pdrive
+pdrive
 ```
 
 ### Getting started
@@ -39,7 +43,7 @@ ssh -N -L 9999:localhost:9999 your@host.com
 ### Documentation
 
 ```
-usage: python -m pdrive [-h] [-H HOST] [-p PORT]
+usage: pdrive [-h] [-H HOST] [-p PORT]
 
 optional arguments:
   -h, --help            show this help message and exit
