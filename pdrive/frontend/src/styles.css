@@ -44,7 +44,8 @@ body {
 .header-bar-actions {
     display: flex;
     align-items: center;
-    gap: 16px;
+    /* same gap inside and between groups so every button is evenly spaced */
+    gap: 6px;
 }
 
 .header-bar-button-group {
