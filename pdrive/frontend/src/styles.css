@@ -459,8 +459,11 @@ button {
 
 .grid-item-preview {
     text-align: center;
-    padding-bottom: 10px;
-    height: 100px;
+    /* the 64px drawing pushed down by its 13px of air, and nothing more: the
+       10px that used to be padding under the box are now the whole distance
+       to the filename, so the name sits under its icon instead of floating */
+    height: 77px;
+    margin-bottom: 10px;
     vertical-align: middle;
 }
 
