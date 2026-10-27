@@ -145,6 +145,10 @@ def process(path):
     import datetime
     import mimetypes
 
+    def timestamp(seconds):
+        # local time, and a format that also sorts correctly as a string
+        return datetime.datetime.fromtimestamp(seconds).strftime("%Y-%m-%d %H:%M:%S")
+
     name = pth.split(path)[1]
     statinfo = os.stat(path)
 
@@ -157,13 +161,19 @@ def process(path):
     if node_type == "file":
         mimetype, _ = mimetypes.guess_type(path)
 
+    # st_birthtime is the real creation time (macOS, Windows, some BSDs).
+    # Platforms without it (Linux) fall back to st_ctime, the last inode
+    # change, which is the closest thing they have.
+    created = getattr(statinfo, "st_birthtime", None) or statinfo.st_ctime
+
     return {
         "name": name,
         "path": path,
         "type": node_type,
         "mimetype": mimetype,
         "size": statinfo.st_size,
-        "mtime": datetime.datetime.utcfromtimestamp(statinfo.st_mtime).strftime("%Y-%M-%d %I:%M:%S %p")
+        "ctime": timestamp(created),
+        "mtime": timestamp(statinfo.st_mtime)
     }
 
 

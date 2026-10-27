@@ -2,7 +2,7 @@
 // Copyright (C) 2017 Huy Nguyen
 // Licensed under the GNU General Public License v3 or later. See LICENSE.
 
-import { formatSize, truncate } from '../utils.js'
+import { formatKind, formatSize, truncate } from '../utils.js'
 
 function SortIcon({ column, sort }) {
     if (sort.column !== column) {
@@ -23,8 +23,14 @@ export default function FileList({ nodes, sort, dropTargetPath, onRowClick, onRo
                     <th onClick={() => onToggleSort('name')}>
                         Name <SortIcon column="name" sort={sort} />
                     </th>
+                    <th onClick={() => onToggleSort('kind')}>
+                        Kind <SortIcon column="kind" sort={sort} />
+                    </th>
                     <th onClick={() => onToggleSort('size')}>
                         Size <SortIcon column="size" sort={sort} />
+                    </th>
+                    <th onClick={() => onToggleSort('ctime')}>
+                        Created <SortIcon column="ctime" sort={sort} />
                     </th>
                     <th onClick={() => onToggleSort('mtime')}>
                         Last modified <SortIcon column="mtime" sort={sort} />
@@ -48,7 +54,9 @@ export default function FileList({ nodes, sort, dropTargetPath, onRowClick, onRo
                                 : <i className="material-icons md-18 md-dark">insert_drive_file</i>}
                             <span data-drag-handle style={{ marginLeft: '10px' }}>{truncate(node.name, 40)}</span>
                         </td>
+                        <td>{formatKind(node)}</td>
                         <td>{formatSize(node)}</td>
+                        <td>{node.ctime}</td>
                         <td>{node.mtime}</td>
                     </tr>
                 ))}

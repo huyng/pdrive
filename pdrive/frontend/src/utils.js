@@ -35,14 +35,45 @@ export function formatSize(row) {
     return String(Math.round(row.size / Math.pow(1024, 3))) + ' GB'
 }
 
+const KIND_NOUNS = {
+    audio: 'audio',
+    font: 'font',
+    image: 'image',
+    model: 'model',
+    text: 'document',
+    video: 'video',
+}
+
+// "image/png" on "photo.png" reads as "PNG image" in the file list.
+export function formatKind(row) {
+    if (row.type === 'dir') {
+        return 'Folder'
+    }
+    const mimetype = row.mimetype || ''
+    const [group, subtype = ''] = mimetype.split('/')
+    const dotted = row.name.includes('.') ? row.name.split('.').pop().toUpperCase() : ''
+    const label = dotted || subtype.split(/[.+-]/).pop().toUpperCase()
+    const noun = KIND_NOUNS[group] || 'file'
+    if (!label) {
+        return noun[0].toUpperCase() + noun.slice(1)
+    }
+    return `${label} ${noun}`
+}
+
+// Columns whose sort key is computed rather than read straight off the node.
+const SORT_VALUES = {
+    kind: formatKind,
+}
+
 export function sortNodes(nodes, { column, order }) {
+    const valueOf = SORT_VALUES[column] || ((node) => node[column])
     return [...nodes].sort((a, b) => {
         // always place directories on top
         if (a.type !== b.type) {
             return a.type === 'dir' ? -1 : 1
         }
-        const aValue = a[column]
-        const bValue = b[column]
+        const aValue = valueOf(a)
+        const bValue = valueOf(b)
         let comparison = typeof aValue === 'string'
             ? aValue.localeCompare(bValue)
             : aValue - bValue
