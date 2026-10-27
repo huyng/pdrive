@@ -94,30 +94,25 @@ export default function FileList({
 
                     const { node, depth } = row
                     // Rows below the top level belong to an expanded folder.
-                    // Selection, drag and drop and the context menu all work
-                    // on the listing of the current directory, so those rows
-                    // are informational only.
+                    // They behave like the rows of the directory itself:
+                    // selectable, draggable, with a context menu of their own.
                     const nested = depth > 0
                     const expanded = node.type === 'dir' && expandedPaths.has(node.path)
-                    const className = nested
-                        ? 'nested-row'
-                        : `${node.isSelected ? 'selected' : ''}${node.path === dropTargetPath ? ' drop-target' : ''}`.trim() || undefined
+                    const className = [
+                        nested ? 'nested-row' : '',
+                        node.isSelected ? 'selected' : '',
+                        node.path === dropTargetPath ? 'drop-target' : '',
+                    ].filter(Boolean).join(' ') || undefined
 
                     return (
                         <tr
                             key={`${node.path}-${index}`}
-                            data-path={nested ? undefined : node.path}
-                            data-dir={!nested && node.type === 'dir' ? 'true' : undefined}
+                            data-path={node.path}
+                            data-dir={node.type === 'dir' ? 'true' : undefined}
                             className={className}
-                            onClick={nested ? undefined : (event) => onRowClick(node, event)}
-                            onContextMenu={nested ? undefined : (event) => onRowRightClick(node, event)}
-                            onDoubleClick={nested
-                                // a folder below the top level opens in place,
-                                // a file is handed to the browser
-                                ? (event) => (node.type === 'dir'
-                                    ? onToggleExpand(node.path)
-                                    : onRowDoubleClick(node, event))
-                                : (event) => onRowDoubleClick(node, event)}
+                            onClick={(event) => onRowClick(node, event)}
+                            onContextMenu={(event) => onRowRightClick(node, event)}
+                            onDoubleClick={(event) => onRowDoubleClick(node, event)}
                         >
                             <td style={depth > 0 ? { paddingLeft: 18 + depth * INDENT } : undefined}>
                                 <RowCaret
@@ -126,10 +121,7 @@ export default function FileList({
                                     onToggle={onToggleExpand}
                                 />
                                 <RowIcon node={node} />
-                                <span
-                                    data-drag-handle={nested ? undefined : ''}
-                                    style={{ marginLeft: '10px' }}
-                                >
+                                <span data-drag-handle style={{ marginLeft: '10px' }}>
                                     {truncate(node.name, 40)}
                                 </span>
                             </td>

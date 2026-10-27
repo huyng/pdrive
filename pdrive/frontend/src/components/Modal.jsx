@@ -6,8 +6,9 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
 // Minimal modal dialog: rendered into document.body, closes on Escape or on a
-// click on the backdrop.
-export default function Modal({ open, title, onClose, footer, className, children }) {
+// click on the backdrop. A `bare` dialog gets no header or footer of its own,
+// the content brings all the chrome it needs.
+export default function Modal({ open, title, onClose, footer, className, backdropClassName, bare = false, children }) {
     // keep the latest callback without re-running the effect below: it must not
     // re-run on every render, or the cleanup would steal focus from the dialog
     const onCloseRef = useRef(onClose)
@@ -46,13 +47,20 @@ export default function Modal({ open, title, onClose, footer, className, childre
     }
 
     return createPortal(
-        <div className="modal-backdrop" onMouseDown={handleBackdropMouseDown}>
+        <div
+            className={'modal-backdrop' + (backdropClassName ? ' ' + backdropClassName : '')}
+            onMouseDown={handleBackdropMouseDown}
+        >
             <div className={'modal' + (className ? ' ' + className : '')} role="dialog" aria-modal="true" aria-label={title}>
-                <div className="modal-header">
-                    <h2 className="modal-title">{title}</h2>
-                </div>
-                <div className="modal-body">{children}</div>
-                {footer && <div className="modal-footer">{footer}</div>}
+                {bare ? children : (
+                    <>
+                        <div className="modal-header">
+                            <h2 className="modal-title">{title}</h2>
+                        </div>
+                        <div className="modal-body">{children}</div>
+                        {footer && <div className="modal-footer">{footer}</div>}
+                    </>
+                )}
             </div>
         </div>,
         document.body

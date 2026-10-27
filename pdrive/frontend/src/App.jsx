@@ -63,7 +63,7 @@ export default function App() {
     const [cwd, setCwd] = useState('')
     const [hostname, setHostname] = useState(null)          // null until the backend reports it
     const [nodes, setNodes] = useState([])
-    const [lastClickedRow, setLastClickedRow] = useState(null)
+    const [lastClickedPath, setLastClickedPath] = useState(null)
     const [viewMode, setViewMode] = useState('list')       // possible values: list, grid
     const [showDotfiles, setShowDotfiles] = useState(false)
     const [sort, setSort] = useState({ column: 'mtime', order: 'descending' })
@@ -87,7 +87,18 @@ export default function App() {
         showDotfiles ? nodes : withoutDotfiles(nodes)
     ), [nodes, showDotfiles])
     const sortedNodes = useMemo(() => sortNodes(visibleNodes, sort), [visibleNodes, sort])
-    const selectedNodes = useMemo(() => visibleNodes.filter((node) => node.isSelected), [visibleNodes])
+    const selectedNodes = useMemo(() => {
+        const selected = visibleNodes.filter((node) => node.isSelected)
+        // the contents of expanded folders are selectable too
+        childListings.forEach((list) => {
+            list.forEach((node) => {
+                if (node.isSelected && (showDotfiles || !isDotfile(node))) {
+                    selected.push(node)
+                }
+            })
+        })
+        return selected
+    }, [visibleNodes, childListings, showDotfiles])
 
     // The rows of the list view: every expanded folder is followed by its
     // contents, which are indented and can be expanded in turn.
@@ -115,8 +126,10 @@ export default function App() {
     // The files the preview dialog can show, in the order they appear on screen;
     // used for the prev/next arrows.
     const previewableNodes = useMemo(
-        () => sortedNodes.filter((node) => previewKind(node) !== 'unsupported'),
-        [sortedNodes],
+        () => listRows
+            .filter((row) => row.node && previewKind(row.node) !== 'unsupported')
+            .map((row) => row.node),
+        [listRows],
     )
     const previewIndex = preview.node
         ? previewableNodes.findIndex((node) => node.path === preview.node.path)
@@ -124,15 +137,52 @@ export default function App() {
 
     const selectedPaths = useMemo(() => selectedNodes.map((node) => node.path), [selectedNodes])
 
+    // Selection is kept on the node copies held by the listing of the current
+    // directory and by the expanded folders, so that the grid, the list and the
+    // context menu all see the same thing. This updates both in one go.
+    const applySelection = useCallback((isSelected) => {
+        const mark = (node) => {
+            const wanted = isSelected(node)
+            return node.isSelected === wanted ? node : { ...node, isSelected: wanted }
+        }
+        setNodes((prev) => prev.map(mark))
+        setChildListings((prev) => {
+            let changed = false
+            const next = new Map()
+            prev.forEach((list, path) => {
+                const marked = list.map(mark)
+                if (marked.some((node, index) => node !== list[index])) {
+                    changed = true
+                }
+                next.set(path, marked)
+            })
+            return changed ? next : prev
+        })
+    }, [])
+
+    // Reload the current directory and drop the cached listings of expanded
+    // folders (they are fetched again); the folders stay open. Used after a
+    // command that changed what the server has on disk.
+    const reloadCurrent = useCallback(async () => {
+        try {
+            const data = cwd
+                ? await postCommand({ command: 'ls', path: cwd })
+                : await fetchListing()
+            setNodes(data.nodes.map((node) => ({ ...node, isSelected: false })))
+            setChildListings(new Map())
+            loadingChildren.current.clear()
+            setLastClickedPath(null)
+        } catch (err) {
+            console.error('could not reload', cwd, err)
+        }
+    }, [cwd])
+
     // Rubber-band selection: the hook reports every path the drag rectangle
     // touches, this replaces (or extends, with meta/ctrl/shift) the selection.
     const handleMarqueeSelect = useCallback((paths) => {
         const selection = new Set(paths)
-        setNodes((prev) => prev.map((node) => {
-            const isSelected = selection.has(node.path)
-            return node.isSelected === isSelected ? node : { ...node, isSelected }
-        }))
-    }, [])
+        applySelection((node) => selection.has(node.path))
+    }, [applySelection])
 
     const {
         containerRef: selectionRef,
@@ -334,8 +384,8 @@ export default function App() {
             console.error('could not move', paths, 'to', destination, err)
             return
         }
-        await loadDirectory(cwd)
-    }, [cwd, loadDirectory])
+        await reloadCurrent()
+    }, [reloadCurrent])
 
     const {
         ghost: moveGhost,
@@ -426,10 +476,8 @@ export default function App() {
     }, [openPreview, preview.open, selectedNodes])
 
     const clearSelection = useCallback(() => {
-        setNodes((prev) => prev.map((node) => (
-            node.isSelected ? { ...node, isSelected: false } : node
-        )))
-    }, [])
+        applySelection(() => false)
+    }, [applySelection])
 
     const handleAppClick = useCallback(() => {
         setMenu((prev) => (prev.visible ? { ...prev, visible: false } : prev))
@@ -440,53 +488,38 @@ export default function App() {
         event.stopPropagation()
         setMenu((prev) => ({ ...prev, visible: false }))
 
-        setNodes((prev) => {
-            const names = sortNodes(showDotfiles ? prev : withoutDotfiles(prev), sort)
-                .map((node) => node.name)
-            const toSelect = new Set([row.name])
+        // Range selection follows the order the rows are drawn in, which
+        // includes the contents of expanded folders.
+        const order = listRows.filter((entry) => entry.node).map((entry) => entry.node.path)
+        const toSelect = new Set([row.path])
 
-            if (event.shiftKey && lastClickedRow) {
-                const a = names.indexOf(lastClickedRow)
-                const b = names.indexOf(row.name)
-                if (a >= 0 && b >= 0) {
-                    const [start, stop] = a < b ? [a, b] : [b, a]
-                    for (let i = start; i <= stop; i += 1) {
-                        toSelect.add(names[i])
-                    }
+        if (event.shiftKey && lastClickedPath) {
+            const a = order.indexOf(lastClickedPath)
+            const b = order.indexOf(row.path)
+            if (a >= 0 && b >= 0) {
+                const [start, stop] = a < b ? [a, b] : [b, a]
+                for (let i = start; i <= stop; i += 1) {
+                    toSelect.add(order[i])
                 }
-                return prev.map((node) => (
-                    toSelect.has(node.name) && !node.isSelected ? { ...node, isSelected: true } : node
-                ))
             }
+            applySelection((node) => node.isSelected || toSelect.has(node.path))
+        } else if (event.metaKey) {
+            // cmd/ctrl click adds to the current selection
+            applySelection((node) => node.isSelected || toSelect.has(node.path))
+        } else {
+            applySelection((node) => toSelect.has(node.path))
+        }
 
-            if (event.metaKey) {
-                // cmd/ctrl click adds to the current selection
-                return prev.map((node) => (
-                    toSelect.has(node.name) && !node.isSelected ? { ...node, isSelected: true } : node
-                ))
-            }
-
-            return prev.map((node) => {
-                const isSelected = toSelect.has(node.name)
-                return node.isSelected === isSelected ? node : { ...node, isSelected }
-            })
-        })
-
-        setLastClickedRow(row.name)
-    }, [lastClickedRow, showDotfiles, sort])
+        setLastClickedPath(row.path)
+    }, [applySelection, lastClickedPath, listRows])
 
     const handleRowRightClick = useCallback((row, event) => {
         event.preventDefault()
-        setNodes((prev) => {
-            const cleared = row.isSelected
-                ? prev
-                : prev.map((node) => (node.isSelected ? { ...node, isSelected: false } : node))
-            return cleared.map((node) => (
-                node.name === row.name && !node.isSelected ? { ...node, isSelected: true } : node
-            ))
-        })
+        if (!row.isSelected) {
+            applySelection((node) => node.path === row.path)
+        }
         setMenu({ visible: true, x: event.pageX, y: event.pageY })
-    }, [])
+    }, [applySelection])
 
     const handleRowDoubleClick = useCallback((row) => {
         if (row.type === 'file') {
@@ -506,12 +539,10 @@ export default function App() {
         // dropping the selection keeps actions (delete, rename, ...) from
         // targeting rows that are about to be hidden
         if (showDotfiles) {
-            setNodes((prev) => prev.map((node) => (
-                isDotfile(node) && node.isSelected ? { ...node, isSelected: false } : node
-            )))
+            applySelection((node) => node.isSelected && !isDotfile(node))
         }
         setShowDotfiles((prev) => !prev)
-    }, [showDotfiles])
+    }, [applySelection, showDotfiles])
 
     const toggleSort = useCallback((column) => {
         setSort((prev) => ({
@@ -557,14 +588,13 @@ export default function App() {
         if (targets.length === 0) {
             return
         }
-        const names = new Set(targets.map((node) => node.name))
         try {
             await postCommand({ command: 'rm', paths: targets.map((node) => node.path) })
-            setNodes((prev) => prev.filter((node) => !names.has(node.name)))
+            await reloadCurrent()
         } catch (err) {
-            console.error('could not delete', [...names], err)
+            console.error('could not delete', targets.map((node) => node.path), err)
         }
-    }, [selectedNodes])
+    }, [reloadCurrent, selectedNodes])
 
     // ---------------------------------------------------------------------
     // Dialogs
@@ -596,13 +626,13 @@ export default function App() {
             return
         }
         const newPath = cwd + '/' + newName
-        setNodes((prev) => [...prev, { ...node, name: basename(newPath), path: newPath }])
         try {
             await postCommand({ command: 'cp', paths: [node.path], destination: newPath })
+            await reloadCurrent()
         } catch (err) {
             console.error('could not copy node', node.path, err)
         }
-    }, [copyDialog, cwd])
+    }, [copyDialog, cwd, reloadCurrent])
 
     const confirmRename = useCallback(async () => {
         const { node, value } = renameDialog
@@ -611,13 +641,36 @@ export default function App() {
         if (!node || !newPath) {
             return
         }
+        const oldPath = node.path
+        // the node can be a row of an expanded folder, in which case the path
+        // of everything below it changes with it
+        const remap = (path) => {
+            if (path === oldPath) {
+                return newPath
+            }
+            return path.startsWith(oldPath + '/')
+                ? newPath + path.slice(oldPath.length)
+                : path
+        }
         try {
-            await postCommand({ command: 'mv', paths: [node.path], destination: newPath })
+            await postCommand({ command: 'mv', paths: [oldPath], destination: newPath })
             setNodes((prev) => prev.map((n) => (
-                n.path === node.path ? { ...n, name: basename(newPath), path: newPath } : n
+                n.path === oldPath ? { ...n, name: basename(newPath), path: newPath } : n
             )))
+            setChildListings((prev) => {
+                const next = new Map()
+                prev.forEach((list, path) => {
+                    next.set(remap(path), list.map((n) => (
+                        n.path === oldPath
+                            ? { ...n, name: basename(newPath), path: newPath }
+                            : { ...n, path: remap(n.path) }
+                    )))
+                })
+                return next
+            })
+            setExpandedPaths((prev) => new Set([...prev].map(remap)))
         } catch (err) {
-            console.error('could not rename node', node.path, err)
+            console.error('could not rename node', oldPath, err)
         }
     }, [renameDialog])
 

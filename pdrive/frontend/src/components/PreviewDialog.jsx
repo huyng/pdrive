@@ -77,7 +77,11 @@ function PreviewBody({ node, kind }) {
     case 'audio':
         return <audio className="preview-media" src={serveUrl(node.path)} controls />
     case 'text':
-        return <TextPreview node={node} />
+        return (
+            <div className="preview-text-panel">
+                <TextPreview node={node} />
+            </div>
+        )
     default:
         return (
             <div className="preview-placeholder">
@@ -117,34 +121,63 @@ export default function PreviewDialog({ open, node, onClose, onDownload, onPrev,
             open={open && Boolean(node)}
             title={node ? node.name : ''}
             className="modal-preview"
+            backdropClassName="preview-backdrop"
+            bare
             onClose={onClose}
-            footer={(
-                <>
-                    <div className="preview-nav">
-                        <button type="button" className="btn" disabled={!hasPrev} onClick={onPrev}>
-                            <i className="material-icons md-18">chevron_left</i> Prev
-                        </button>
-                        <button type="button" className="btn" disabled={!hasNext} onClick={onNext}>
-                            Next <i className="material-icons md-18">chevron_right</i>
-                        </button>
-                    </div>
-                    <div className="preview-actions">
-                        <button type="button" className="btn" onClick={onDownload}>
-                            <i className="material-icons md-18">file_download</i> Download
-                        </button>
-                        <button type="button" className="btn" onClick={onClose}>
-                            Close
-                        </button>
-                    </div>
-                </>
-            )}
         >
-            {node && (
-                <div className="preview-meta">
-                    {node.type === 'file' ? formatSize(node) : '--'} · {node.mtime}
+            <div className={'preview-content preview-content-' + kind}>
+                {node && <PreviewBody key={node.path} node={node} kind={kind} />}
+            </div>
+
+            <div className="preview-bar">
+                <button
+                    type="button"
+                    className="preview-action"
+                    title="Previous file"
+                    aria-label="Previous file"
+                    disabled={!hasPrev}
+                    onClick={onPrev}
+                >
+                    <i className="material-icons md-18">chevron_left</i>
+                </button>
+                <div className="preview-caption">
+                    <span className="preview-name" title={node ? node.name : ''}>{node ? node.name : ''}</span>
+                    {node && (
+                        <span className="preview-detail">
+                            {node.type === 'file' ? formatSize(node) : '--'} · {node.mtime}
+                        </span>
+                    )}
                 </div>
-            )}
-            {node && <PreviewBody key={node.path} node={node} kind={kind} />}
+                <button
+                    type="button"
+                    className="preview-action"
+                    title="Next file"
+                    aria-label="Next file"
+                    disabled={!hasNext}
+                    onClick={onNext}
+                >
+                    <i className="material-icons md-18">chevron_right</i>
+                </button>
+                <span className="preview-bar-divider" />
+                <button
+                    type="button"
+                    className="preview-action"
+                    title="Download"
+                    aria-label="Download"
+                    onClick={onDownload}
+                >
+                    <i className="material-icons md-18">file_download</i>
+                </button>
+                <button
+                    type="button"
+                    className="preview-action"
+                    title="Close"
+                    aria-label="Close"
+                    onClick={onClose}
+                >
+                    <i className="material-icons md-18">close</i>
+                </button>
+            </div>
         </Modal>
     )
 }

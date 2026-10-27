@@ -599,84 +599,77 @@ table tbody tr.loading-row td {
     color: rgba(255, 255, 255, 0.3);
 }
 
-/* File preview dialog */
+/* File preview: the file itself on a dim backdrop, with one line of chrome
+   underneath instead of a dialog with a header and a row of buttons. */
 
-.modal-preview {
-    display: flex;
-    flex-direction: column;
-    max-height: calc(100vh - 64px);
-    width: min(960px, calc(100vw - 64px));
+.preview-backdrop {
+    background: rgba(0, 0, 0, .82);
 }
 
-.modal-preview .modal-header {
-    align-items: baseline;
+.modal-preview {
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
     display: flex;
-    gap: 12px;
+    flex-direction: column;
+    gap: 16px;
+    max-height: calc(100vh - 40px);
+    max-width: calc(100vw - 40px);
+    width: auto;
+}
+
+.preview-content {
+    align-items: center;
+    display: flex;
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 0;
     min-width: 0;
 }
 
-.modal-preview .modal-title {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.modal-preview .modal-body {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: auto;
-}
-
-.modal-preview .modal-footer {
-    justify-content: space-between;
-}
-
-.preview-meta {
-    color: #8492a6;
-    font-size: 12px;
-    margin-bottom: 12px;
-}
-
 .preview-media {
+    border-radius: 4px;
     display: block;
-    margin: 0 auto;
-    max-height: 65vh;
-    max-width: 100%;
+    max-height: calc(100vh - 120px);
+    max-width: min(1200px, calc(100vw - 40px));
 }
 
 audio.preview-media {
-    width: 100%;
+    max-width: calc(100vw - 40px);
+    width: 420px;
 }
 
 .preview-frame {
+    background: white;
     border: 0;
-    height: 65vh;
-    width: 100%;
+    border-radius: 4px;
+    height: calc(100vh - 120px);
+    width: min(1000px, calc(100vw - 40px));
+}
+
+.preview-text-panel {
+    background: white;
+    border-radius: 6px;
+    box-sizing: border-box;
+    max-height: calc(100vh - 120px);
+    overflow: auto;
+    padding: 16px 18px;
+    width: min(900px, calc(100vw - 40px));
 }
 
 .preview-text {
-    background: #F7F9FC;
-    border: 1px solid #E5E9F2;
-    border-radius: 4px;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 12px;
-    line-height: 1.5;
+    line-height: 1.6;
     margin: 0;
-    max-height: 60vh;
-    overflow: auto;
-    padding: 12px;
     tab-size: 4;
     white-space: pre;
 }
 
 .preview-note {
-    background: #FFF8E6;
-    border: 1px solid #F5DDA8;
-    border-radius: 4px;
     color: #8A6D3B;
-    font-size: 13px;
+    font-size: 12px;
     margin: 0 0 12px;
-    padding: 8px 12px;
 }
 
 .preview-placeholder {
@@ -692,20 +685,81 @@ audio.preview-media {
     margin-bottom: 8px;
 }
 
-.preview-nav,
-.preview-actions {
+/* the "nothing to show" state sits on the backdrop, not on a white panel */
+.preview-content > .preview-placeholder {
+    color: rgba(255, 255, 255, .55);
+    padding: 64px 0;
+}
+
+.preview-content > .preview-placeholder .material-icons {
+    color: rgba(255, 255, 255, .3);
+}
+
+/* the one line of chrome under the file */
+
+.preview-bar {
+    align-items: center;
+    color: rgba(255, 255, 255, .85);
+    display: flex;
+    flex-shrink: 0;
+    font-size: 13px;
+    gap: 6px;
+    justify-content: center;
+    min-height: 32px;
+}
+
+.preview-caption {
+    align-items: baseline;
     display: flex;
     gap: 8px;
+    justify-content: center;
+    max-width: min(60vw, 520px);
+    min-width: 0;
+    overflow: hidden;
 }
 
-.modal-footer .btn .material-icons {
-    vertical-align: text-bottom;
+.preview-name {
+    color: #fff;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.btn:disabled {
-    background: white;
-    border-color: #EBEEF5;
-    color: #C0CCDA;
+.preview-detail {
+    color: rgba(255, 255, 255, .45);
+    flex-shrink: 0;
+    font-size: 12px;
+}
+
+.preview-bar-divider {
+    background: rgba(255, 255, 255, .2);
+    height: 16px;
+    margin: 0 4px;
+    width: 1px;
+}
+
+.preview-action {
+    align-items: center;
+    background: none;
+    border: 0;
+    border-radius: 50%;
+    color: rgba(255, 255, 255, .75);
+    cursor: pointer;
+    display: flex;
+    height: 32px;
+    justify-content: center;
+    padding: 0;
+    width: 32px;
+}
+
+.preview-action:hover:not(:disabled) {
+    background: rgba(255, 255, 255, .12);
+    color: #fff;
+}
+
+.preview-action:disabled {
+    color: rgba(255, 255, 255, .22);
     cursor: default;
 }
 
