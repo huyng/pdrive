@@ -1088,10 +1088,13 @@ export default function App() {
                 <div className="header-bar-brand">
                     <img className="logo-icon" src="/favicon.svg" alt="" width="32" height="32" />
                     <span className="logo-mark">pdrive</span>
-                    {hostLabel && (
-                        <span className="header-bar-host" title={hostLabel}>{hostLabel}</span>
-                    )}
                 </div>
+
+                {/* the host name is centred in the bar itself, not in whatever
+                    space the logo and the buttons leave over */}
+                {hostLabel && (
+                    <span className="header-bar-host" title={hostLabel}>{hostLabel}</span>
+                )}
 
                 <div className="header-bar-actions">
                     {/* View Mode Selection Toolbar */}

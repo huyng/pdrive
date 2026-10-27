@@ -64,9 +64,18 @@ button {
 }
 
 .header-bar-host {
+    /* out of the layout flow, so it is centred in the bar rather than in the
+       space the word mark and the buttons happen to leave over */
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
     color: rgba(255, 255, 255, .7);
     font-size: 13px;
-    min-width: 0;
+    /* The button groups take roughly 340px on the right and the word mark
+       100px on the left, so the label may only grow to twice the shorter side
+       of that gap: it ellipsises instead of sliding under either of them. */
+    max-width: clamp(0px, calc(100% - 684px), 40vw);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -81,6 +90,8 @@ button {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    /* the host name is centred against the bar itself */
+    position: relative;
 }
 
 .header-bar-actions {
@@ -412,7 +423,7 @@ button {
     /* the toolbar is only as tall as the breadcrumbs or this button, whichever
        needs more, so its own margins set the height of the whole bar */
     margin: 3px 0 3px 16px;
-    padding: 5px 14px;
+    padding: 5px 8px 5px 10px;
 }
 
 .new-button .material-icons {
