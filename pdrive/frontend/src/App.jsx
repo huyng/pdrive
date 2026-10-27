@@ -290,16 +290,18 @@ export default function App() {
         })
     }, [])
 
-    // Label the tab with the machine pdrive is serving files from. This is
-    // more useful than window.location.hostname, which is usually just
-    // localhost when the server is reached through an ssh tunnel.
+    // The machine pdrive serves files from. The name the backend reports beats
+    // window.location.hostname, which is usually just localhost when the server
+    // is reached through an ssh tunnel.
+    const hostLabel = useMemo(
+        () => (hostname === null ? '' : hostname || window.location.hostname),
+        [hostname],
+    )
+
+    // Label the tab with that machine too
     useEffect(() => {
-        if (hostname === null) {
-            return
-        }
-        const label = hostname || window.location.hostname
-        document.title = label ? `${label} - pdrive` : 'pdrive'
-    }, [hostname])
+        document.title = hostLabel ? `${hostLabel} - pdrive` : 'pdrive'
+    }, [hostLabel])
 
     // Monotonic id so that a slow response from an older navigation can never
     // overwrite the directory the user is currently looking at.
@@ -846,7 +848,13 @@ export default function App() {
 
             {/* Header Bar */}
             <div className="header-bar">
-                <span className="logo-mark">pDrive</span>
+                <div className="header-bar-brand">
+                    <img className="logo-icon" src="/favicon.svg" alt="" width="32" height="32" />
+                    <span className="logo-mark">pdrive</span>
+                    {hostLabel && (
+                        <span className="header-bar-host" title={hostLabel}>{hostLabel}</span>
+                    )}
+                </div>
 
                 <div className="header-bar-actions">
                     {/* View Mode Selection Toolbar */}

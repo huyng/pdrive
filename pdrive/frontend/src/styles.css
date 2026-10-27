@@ -26,8 +26,39 @@ body {
 }
 
 .logo-mark {
+    flex-shrink: 0;
     font-size: 20px;
     color: white;
+}
+
+/* logo plus the name of the machine serving the files */
+
+.header-bar-brand {
+    align-items: baseline;
+    display: flex;
+    gap: 10px;
+    min-width: 0;
+}
+
+/* the favicon, sitting next to the word mark; the shadow keeps the blue tile
+   from melting into the blue bar */
+.header-bar-brand .logo-icon {
+    align-self: center;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .28);
+    display: block;
+    flex-shrink: 0;
+    height: 22px;
+    width: 22px;
+}
+
+.header-bar-host {
+    color: rgba(255, 255, 255, .7);
+    font-size: 13px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Header bar */
