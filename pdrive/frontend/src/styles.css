@@ -9,7 +9,18 @@
 
 body {
     background: white;
-    font-family: "Avenir", "Arial", sans-serif;
+    /* the font the system draws its own windows with: San Francisco on macOS,
+       Segoe UI on Windows, the desktop's sans on Linux. Nothing to download,
+       and the listing lines up with the rest of the desktop. */
+    font-family:
+        -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui,
+        Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* controls default to the browser's own font, which on macOS is not the system
+   one: the toolbar buttons and the folder chevrons have to inherit too */
+button {
+    font-family: inherit;
 }
 
 .app {
