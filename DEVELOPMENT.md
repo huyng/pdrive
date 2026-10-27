@@ -56,13 +56,55 @@ uv publish --publish-url https://test.pypi.org/legacy/ --token pypi-test-token
 
 # the real thing
 uv publish
-
-# tag what was published
-git tag -a v0.8.5 -m "pdrive 0.8.5" && git push origin master --tags
 ```
 
 `python -m twine upload dist/*` (user `__token__`) is the equivalent if twine is
 already in your toolbelt.
+
+## Tag the release and push it to GitHub
+
+Tag *after* `uv publish` succeeds, so a tag always points at a version people
+can already install. The tag name mirrors the `pyproject.toml` version with a
+`v` in front.
+
+```bash
+# 1. the release commit must be on the branch first
+uv run python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])"
+git status --short          # clean tree
+git push origin master      # this repo's default branch is master
+
+# 2. annotated tag, message = what changed in this release
+#    (it records the tagger and date, which a lightweight tag does not)
+git tag -a v0.9.0 -m "pdrive 0.9.0"
+
+# 3. push that one tag (or --tags for every tag you still have locally)
+git push origin v0.9.0
+
+# 4. check both sides agree
+git tag -n
+git ls-remote --tags origin
+```
+
+Pushing a tag does not create a GitHub *Release* page; that is a separate, if
+optional, step:
+
+```bash
+# with the GitHub CLI
+gh release create v0.9.0 --title "pdrive 0.9.0" \
+    --notes "$(git tag -l --format='%(contents)' v0.9.0)" \
+    dist/pdrive-0.9.0-py3-none-any.whl dist/pdrive-0.9.0.tar.gz
+```
+
+Or in the browser: *Releases → Draft a new release → Choose a tag → v0.9.0*,
+copy the notes in, and attach the two files from `dist/`.
+
+If a tag went out on the wrong commit (it is not yet published):
+
+```bash
+git tag -d v0.9.0                     # local
+git push origin :refs/tags/v0.9.0     # remote
+git tag -a v0.9.0 -m "pdrive 0.9.0"   # then re-tag the right commit
+```
 
 ## Release checklist
 
@@ -75,5 +117,5 @@ unzip -l dist/pdrive-*.whl && uvx twine check dist/*
 uv venv /tmp/t && uv pip install --python /tmp/t/bin/python dist/pdrive-*.whl
 /tmp/t/bin/pdrive -p 8124                       # spot-check the UI in a browser
 uv publish
-git tag -a vX.Y.Z -m "pdrive X.Y.Z" && git push origin master --tags
+git tag -a vX.Y.Z -m "pdrive X.Y.Z" && git push origin vX.Y.Z
 ```
