@@ -51,16 +51,13 @@ button {
     min-width: 0;
 }
 
-/* the favicon, sitting next to the word mark; the shadow keeps the blue tile
-   from melting into the blue bar */
+/* the folder of the app icon, next to the word mark. It has no tile of its
+   own, so the shadow is what keeps the white shape off the blue bar. */
 .header-bar-brand .logo-icon {
     align-self: center;
-    border-radius: 5px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, .28);
     display: block;
     flex-shrink: 0;
-    height: 22px;
-    width: 22px;
+    filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .3));
 }
 
 .header-bar-host {

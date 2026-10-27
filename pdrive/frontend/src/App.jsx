@@ -16,6 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import BrandLogo from './components/BrandLogo.jsx'
 import ConfirmDialog from './components/ConfirmDialog.jsx'
 import ContextMenu from './components/ContextMenu.jsx'
 import Dropdown from './components/Dropdown.jsx'
@@ -1320,7 +1321,7 @@ export default function App() {
             {/* Header Bar */}
             <div className="header-bar">
                 <div className="header-bar-brand">
-                    <img className="logo-icon" src="/favicon.svg" alt="" width="32" height="32" />
+                    <BrandLogo />
                     <span className="logo-mark">pdrive</span>
                 </div>
 
