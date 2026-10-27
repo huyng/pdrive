@@ -395,13 +395,22 @@ body {
 /* Grid View Styles */
 
 .grid-view {
+    /* A real grid (instead of floats) keeps the files in fixed columns and
+       rows, no matter how tall an individual tile turns out to be. The 60px
+       gap reproduces the 30px margins the tiles used to carry. */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 100px);
+    gap: 60px;
+    padding: 30px;
+    justify-content: start;
+    align-content: start;
     overflow: hidden;
 }
 
 .grid-view .grid-item {
-    float: left;
+    display: flex;
+    flex-direction: column;
     width: 100px;
-    margin: 30px;
 }
 
 .grid-item-preview {
@@ -411,12 +420,30 @@ body {
     vertical-align: middle;
 }
 
+.grid-view .grid-item-preview img {
+    /* the 1px frame has to be part of the 100px box, otherwise image tiles
+       end up 2px taller than the icon and folder tiles */
+    box-sizing: border-box;
+    display: block;
+    margin: 0 auto;
+    border-radius: 6px;
+}
+
 .grid-view .grid-item .filename {
     border-radius: 4px;
     padding: 4px;
     text-align: center;
     font-size: .8em;
-    overflow-x: hidden;
+    line-height: 1.25;
+    /* Every name gets exactly two lines of room and longer names are clamped
+       with an ellipsis, so all tiles are the same height and the rows of the
+       grid stay aligned. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    height: 2.5em;
+    overflow: hidden;
+    overflow-wrap: anywhere;
     transition: background-color .05s ease-in-out;
 }
 
@@ -689,8 +716,17 @@ table tbody tr.drop-target td {
 
 .grid-view .grid-item.drop-target {
     /* the highlight has to cover icon + filename, so it outlines the tile
-       instead of the preview box; the tile margins leave room for it */
+       instead of the preview box; the grid gap leaves room for it */
     border-radius: 4px;
     outline: 2px solid #409EFF;
     outline-offset: 2px;
+}
+
+/* Hidden copy of a few tiles, used to measure how much of a filename fits in
+   the two lines the tiles give it. It inherits the real tile styles. */
+.filename-measurer {
+    left: -10000px;
+    position: absolute;
+    top: 0;
+    visibility: hidden;
 }
