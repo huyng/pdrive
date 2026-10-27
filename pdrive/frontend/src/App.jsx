@@ -48,6 +48,11 @@ function pathFromLocation() {
     }
 }
 
+// Only a zip archive can be unpacked, and only a file can be one.
+function isZipNode(node) {
+    return Boolean(node) && node.type !== 'dir' && /\.zip$/i.test(node.name)
+}
+
 function writeLocationPath(path, { replace = false } = {}) {
     const url = path
         ? PATH_HASH_PREFIX + encodeURIComponent(path)
@@ -229,12 +234,17 @@ export default function App() {
     const menuVisibility = useMemo(() => {
         // Duplicate / rename / download only make sense for a single selection
         const single = selectedNodes.length <= 1
+        const only = selectedNodes.length === 1 ? selectedNodes[0] : null
         return {
             preview: selectedNodes.length === 1,
             copy: single,
             rename: single,
             copyPath: true,
             download: single,
+            // anything can be compressed unless the whole selection is made of
+            // archives already, and a single archive is what can be extracted
+            compress: selectedNodes.length > 0 && !selectedNodes.every(isZipNode),
+            extract: isZipNode(only),
             trash: true,
             deletePermanently: true,
         }
@@ -769,6 +779,77 @@ export default function App() {
         window.open(downloadUrl(selectedNodes[0].path))
     }, [selectedNodes])
 
+    // Compress the selection into one archive next to it. The backend names it
+    // the way the Finder would (notes.txt.zip, Photos.zip, Archive.zip for a
+    // multiple selection) and never overwrites: a second run leaves
+    // "notes.txt 2.zip".
+    const handleCompressContextualMenu = useCallback(async () => {
+        const targets = selectedNodes
+        if (targets.length === 0) {
+            return
+        }
+        let failed = []
+        try {
+            const result = await postCommand({
+                command: 'zip',
+                paths: targets.map((node) => node.path),
+                destination: cwd,
+            })
+            failed = result.failed || []
+        } catch (err) {
+            console.error('could not compress', targets.map((node) => node.path), err)
+            alert('Could not compress: ' + (err.payload?.error || err.message))
+            return
+        }
+        await reloadCurrent()
+        if (failed.length > 0) {
+            alert('Could not compress everything:\n'
+                + failed.map((item) => `${basename(item.path)}: ${item.error}`).join('\n'))
+        }
+    }, [cwd, reloadCurrent, selectedNodes])
+
+    // Unpack an archive in place. When the archive would overwrite something,
+    // the backend says what and the user decides once for the whole archive.
+    const handleExtractContextualMenu = useCallback(async () => {
+        const node = selectedNodes[0]
+        if (!isZipNode(node)) {
+            return
+        }
+        let result = null
+        try {
+            result = await postCommand({ command: 'unzip', path: node.path })
+        } catch (err) {
+            if (err.status !== 409) {
+                alert(`Could not extract “${basename(node.path)}”: `
+                    + (err.payload?.error || err.message))
+                return
+            }
+            const count = err.payload?.count ?? 0
+            const sample = (err.payload?.conflicts ?? []).slice(0, 3)
+                .map((conflict) => basename(conflict)).join(', ')
+            if (!window.confirm(`${count} item${count === 1 ? '' : 's'} already exist`
+                + `${count === 1 ? 's' : ''} (${sample}). Replace ${count === 1 ? 'it' : 'them'}?`)) {
+                return
+            }
+            try {
+                result = await postCommand({ command: 'unzip', path: node.path, overwrite: true })
+            } catch (retryError) {
+                alert(`Could not extract “${basename(node.path)}”: `
+                    + (retryError.payload?.error || retryError.message))
+                return
+            }
+        }
+        await reloadCurrent()
+        const problems = (result?.failed || [])
+            .map((item) => `${basename(item.path)}: ${item.error}`)
+        if (result?.skipped?.length) {
+            problems.push(`${result.skipped.length} item(s) point outside the folder and were skipped`)
+        }
+        if (problems.length > 0) {
+            alert('The archive was unpacked, but not everything:\n' + problems.join('\n'))
+        }
+    }, [reloadCurrent, selectedNodes])
+
     // Nothing is unlinked here: the backend hands the paths to the trash of
     // the host system (Recycle Bin, ~/.Trash, the freedesktop trash), so a
     // misclick can always be taken back from the desktop.
@@ -1176,6 +1257,8 @@ export default function App() {
                 onRename={handleRenameContextualMenu}
                 onCopyPath={handleCopyPathContextualMenu}
                 onDownload={handleDownloadContextualMenu}
+                onCompress={handleCompressContextualMenu}
+                onExtract={handleExtractContextualMenu}
                 onTrash={handleMoveToTrashContextualMenu}
                 onDeletePermanently={handleDeletePermanentlyContextualMenu}
             />

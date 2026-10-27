@@ -18,7 +18,16 @@
 
 async function parseJson(response) {
     if (!response.ok) {
-        throw new Error(`${response.status} ${response.statusText}`)
+        const error = new Error(`${response.status} ${response.statusText}`)
+        error.status = response.status
+        // a refusal can say why ("these items exist", "not a zip archive"), and
+        // the caller is expected to show that instead of the status line
+        try {
+            error.payload = await response.json()
+        } catch (err) {
+            error.payload = null
+        }
+        throw error
     }
     return response.json()
 }
