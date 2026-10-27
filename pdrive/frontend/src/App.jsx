@@ -477,6 +477,161 @@ export default function App() {
         return () => document.removeEventListener('keydown', handleKeyDown)
     }, [openPreview, preview.open, selectedNodes])
 
+    // Arrow keys walk the listing, in both views. In the grid sideways keys hop
+    // one tile over, a row at a time. The list view is a tree, so there they
+    // fold and unfold the folders in place instead: right opens a folder, or
+    // steps into it once it is open, left closes it, or jumps back up to the
+    // folder the row sits in.
+    useEffect(() => {
+        const dialogOpen = preview.open
+            || renameDialog.visible
+            || copyDialog.visible
+            || newFolderDialog.visible
+        if (dialogOpen || menu.visible) {
+            return undefined
+        }
+
+        const arrows = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
+
+        const handleKeyDown = (event) => {
+            if (!arrows.includes(event.key)) {
+                return
+            }
+            if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+                return
+            }
+            const target = event.target
+            if (target instanceof HTMLElement && (
+                target.isContentEditable
+                || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+            )) {
+                return
+            }
+
+            // the rows on screen, top to bottom, then left to right
+            const rows = viewMode === 'grid' ? [] : listRows.filter((row) => row.node)
+            const paths = viewMode === 'grid'
+                ? sortedNodes.map((node) => node.path)
+                : rows.map((row) => row.node.path)
+            if (paths.length === 0) {
+                return
+            }
+            event.preventDefault()  // the arrows must not scroll the listing
+
+            // the cursor: the row that was clicked last, or else the top of
+            // the selection
+            let index = lastClickedPath ? paths.indexOf(lastClickedPath) : -1
+            if (index < 0) {
+                const selected = selectedNodes.find((node) => paths.includes(node.path))
+                index = selected ? paths.indexOf(selected.path) : -1
+            }
+
+            const selectPath = (path) => {
+                applySelection((node) => node.path === path)
+                setLastClickedPath(path)
+                const container = selectionRef.current
+                const row = container
+                    && [...container.querySelectorAll('[data-path]')]
+                        .find((element) => element.getAttribute('data-path') === path)
+                // follow the cursor when it walks out of sight
+                row?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+            }
+
+            // the row that many places away, walking off the end means the
+            // cursor stays where it is (only an empty cursor moves to the top)
+            const stepBy = (delta) => {
+                if (index < 0) {
+                    return paths[0]
+                }
+                const next = index + delta
+                if (next < 0 || next >= paths.length) {
+                    return null
+                }
+                return paths[next]
+            }
+
+            const moveTo = (delta) => {
+                const path = stepBy(delta)
+                if (path) {
+                    selectPath(path)
+                }
+            }
+
+            if (viewMode === 'grid') {
+                const grid = selectionRef.current?.querySelector('.grid-view')
+                const columns = grid
+                    ? getComputedStyle(grid).gridTemplateColumns.split(/\s+/).filter(Boolean).length || 1
+                    : 1
+                if (event.key === 'ArrowLeft') {
+                    moveTo(-1)
+                } else if (event.key === 'ArrowRight') {
+                    moveTo(1)
+                } else if (event.key === 'ArrowUp') {
+                    moveTo(-columns)
+                } else {
+                    moveTo(columns)
+                }
+                return
+            }
+
+            if (index < 0) {
+                // nothing to move from: start at the top
+                selectPath(paths[0])
+                return
+            }
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                moveTo(event.key === 'ArrowDown' ? 1 : -1)
+                return
+            }
+
+            const node = rows[index].node
+            const depth = rows[index].depth
+            if (event.key === 'ArrowRight') {
+                if (node.type !== 'dir') {
+                    return
+                }
+                if (!expandedPaths.has(node.path)) {
+                    toggleExpanded(node.path)
+                    return
+                }
+                const below = rows[index + 1]
+                if (below && below.node && below.depth > depth) {
+                    selectPath(below.node.path)
+                }
+                return
+            }
+
+            // ArrowLeft
+            if (node.type === 'dir' && expandedPaths.has(node.path)) {
+                toggleExpanded(node.path)
+                return
+            }
+            for (let up = index - 1; depth > 0 && up >= 0; up -= 1) {
+                if (rows[up].depth < depth) {
+                    selectPath(rows[up].node.path)
+                    return
+                }
+            }
+        }
+
+        document.addEventListener('keydown', handleKeyDown)
+        return () => document.removeEventListener('keydown', handleKeyDown)
+    }, [
+        applySelection,
+        copyDialog.visible,
+        expandedPaths,
+        lastClickedPath,
+        listRows,
+        menu.visible,
+        newFolderDialog.visible,
+        preview.open,
+        renameDialog.visible,
+        selectedNodes,
+        sortedNodes,
+        toggleExpanded,
+        viewMode,
+    ])
+
     const clearSelection = useCallback(() => {
         applySelection(() => false)
     }, [applySelection])

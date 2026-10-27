@@ -107,7 +107,8 @@ export default function PreviewDialog({ open, node, onClose, onDownload, onPrev,
     const shown = node ?? lastShown.current.node
     const nav = node ? { hasPrev, hasNext } : lastShown.current
 
-    // left/right step through the previewable files of the current folder
+    // left/right step through the previewable files of the current folder,
+    // the space bar closes the preview it opened
     useEffect(() => {
         if (!open) {
             return undefined
@@ -116,7 +117,12 @@ export default function PreviewDialog({ open, node, onClose, onDownload, onPrev,
             if (event.altKey || event.ctrlKey || event.metaKey) {
                 return
             }
-            if (event.key === 'ArrowLeft' && hasPrev) {
+            if (event.key === ' ' || event.code === 'Space') {
+                // no scrolling of the listing behind, no click on a focused
+                // button of the bar either
+                event.preventDefault()
+                onClose?.()
+            } else if (event.key === 'ArrowLeft' && hasPrev) {
                 event.preventDefault()
                 onPrev?.()
             } else if (event.key === 'ArrowRight' && hasNext) {
@@ -126,7 +132,7 @@ export default function PreviewDialog({ open, node, onClose, onDownload, onPrev,
         }
         document.addEventListener('keydown', handleKeyDown)
         return () => document.removeEventListener('keydown', handleKeyDown)
-    }, [open, hasPrev, hasNext, onPrev, onNext])
+    }, [open, hasPrev, hasNext, onClose, onPrev, onNext])
 
     const kind = shown ? previewKind(shown) : 'unsupported'
 
