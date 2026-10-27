@@ -27,7 +27,7 @@ import UploadOverlay from './components/UploadOverlay.jsx'
 import { downloadUrl, fetchListing, postCommand, serveUrl, uploadFile } from './api.js'
 import useDragMove from './useDragMove.js'
 import useDragSelect from './useDragSelect.js'
-import { basename, isDotfile, previewKind, sortNodes, withoutDotfiles } from './utils.js'
+import { basename, copyToClipboard, isDotfile, previewKind, sortNodes, withoutDotfiles } from './utils.js'
 
 // The current directory is mirrored into the URL hash so that the browser's
 // back/forward buttons (and their keyboard shortcuts) move between visited
@@ -222,6 +222,7 @@ export default function App() {
             preview: selectedNodes.length === 1,
             copy: single,
             rename: single,
+            copyPath: true,
             download: single,
             delete: true,
         }
@@ -739,6 +740,15 @@ export default function App() {
         setRenameDialog({ visible: true, node, value: node.path })
     }, [selectedNodes])
 
+    // The whole path of what is selected, one per line for a multiple
+    // selection, so it can be pasted into a shell or another file manager.
+    const handleCopyPathContextualMenu = useCallback(() => {
+        if (selectedNodes.length === 0) {
+            return
+        }
+        copyToClipboard(selectedNodes.map((node) => node.path).join('\n'))
+    }, [selectedNodes])
+
     const handleDownloadContextualMenu = useCallback(() => {
         if (selectedNodes.length !== 1) {
             alert('Sorry, downloading multiple files at once is not enabled')
@@ -955,6 +965,7 @@ export default function App() {
                 onPreview={handlePreviewContextualMenu}
                 onCopy={handleCopyContextualMenu}
                 onRename={handleRenameContextualMenu}
+                onCopyPath={handleCopyPathContextualMenu}
                 onDownload={handleDownloadContextualMenu}
                 onDelete={handleDeleteContextualMenu}
             />

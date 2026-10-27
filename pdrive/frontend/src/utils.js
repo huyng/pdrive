@@ -159,3 +159,35 @@ export function previewKind(node) {
     }
     return 'unsupported'
 }
+
+// Copy text to the clipboard. The async clipboard API is only there on https
+// pages (and on localhost), so a plain http install - which is the usual way a
+// pdrive server on some other machine is reached - falls back to the old
+// textarea trick instead of copying nothing.
+export async function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        try {
+            await navigator.clipboard.writeText(text)
+            return true
+        } catch (err) {
+            // no permission, or no user gesture: try the fallback below
+        }
+    }
+
+    const area = document.createElement('textarea')
+    area.value = text
+    area.setAttribute('readonly', '')
+    area.style.position = 'fixed'
+    area.style.top = '-1000px'
+    area.style.opacity = '0'
+    document.body.appendChild(area)
+    try {
+        area.select()
+        return document.execCommand('copy')
+    } catch (err) {
+        console.error('could not copy to the clipboard', err)
+        return false
+    } finally {
+        area.remove()
+    }
+}

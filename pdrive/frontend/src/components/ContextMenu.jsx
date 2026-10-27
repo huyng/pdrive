@@ -2,7 +2,7 @@
 // Copyright (C) 2017 Huy Nguyen
 // Licensed under the GNU General Public License v3 or later. See LICENSE.
 
-export default function ContextMenu({ visible, x, y, visibility, onPreview, onCopy, onRename, onDownload, onDelete }) {
+export default function ContextMenu({ visible, x, y, visibility, onPreview, onCopy, onCopyPath, onRename, onDownload, onDelete }) {
     if (!visible) {
         return null
     }
@@ -21,6 +21,11 @@ export default function ContextMenu({ visible, x, y, visibility, onPreview, onCo
             {visibility.rename && (
                 <div onClick={onRename}>
                     <i className="material-icons md-18">edit</i> Rename
+                </div>
+            )}
+            {visibility.copyPath && (
+                <div onClick={onCopyPath}>
+                    <i className="material-icons md-18">link</i> Copy path to clipboard
                 </div>
             )}
             {visibility.download && (
