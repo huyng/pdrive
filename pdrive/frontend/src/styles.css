@@ -354,6 +354,32 @@ button {
     font-size: 18px;
 }
 
+/* Something the drop could not do (a folder, for one): same pill, but it stays
+   long enough to be read and carries an amber icon. */
+.app-notice {
+    align-items: center;
+    background: rgba(32, 40, 52, .95);
+    border-radius: 10px;
+    bottom: 24px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .28);
+    color: white;
+    display: flex;
+    font-size: 13px;
+    gap: 8px;
+    left: 50%;
+    max-width: 460px;
+    padding: 10px 16px;
+    pointer-events: none;
+    position: fixed;
+    transform: translateX(-50%);
+    z-index: 901;
+}
+
+.app-notice .material-icons {
+    color: #F0A020;
+    font-size: 18px;
+}
+
 /* Upload progress */
 
 .job-progress {

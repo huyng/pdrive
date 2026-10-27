@@ -88,6 +88,10 @@ export default function App() {
     // `target` is the folder tile or row under the pointer, if any.
     const [uploadDrag, setUploadDrag] = useState({ visible: false, target: null })
     const filePickerRef = useRef(null)
+    // A short-lived message for things the browser should have told the user
+    // about but does not (a dropped folder, for instance).
+    const [notice, setNotice] = useState(null)
+    const noticeTimer = useRef(0)
     const [jobProgress, setJobProgress] = useState({ visible: false, tasks: [] })
 
     const visibleNodes = useMemo(() => (
@@ -1020,9 +1024,26 @@ export default function App() {
         files.forEach((file) => uploadOne(file, destination, existing))
     }, [cwd, nodes, uploadOne])
 
+    const showNotice = useCallback((text) => {
+        setNotice(text)
+        clearTimeout(noticeTimer.current)
+        noticeTimer.current = setTimeout(() => setNotice(null), 6000)
+    }, [])
+
+    useEffect(() => () => clearTimeout(noticeTimer.current), [])
+
     // Only a drag carrying files is ours; dragging text or a link around the
     // page must keep the browser's own behaviour.
-    const dragHasFiles = (event) => Array.from(event.dataTransfer?.types ?? []).includes('Files')
+    const dragHasFiles = (event) => {
+        const transfer = event.dataTransfer
+        if (!transfer) {
+            return false
+        }
+        // 'Files' is what browsers report for a drag carrying files; the file
+        // count covers the platforms that leave it out
+        return Array.from(transfer.types ?? []).includes('Files')
+            || (transfer.files?.length ?? 0) > 0
+    }
 
     const handleDragOver = useCallback((event) => {
         if (!dragHasFiles(event)) {
@@ -1045,15 +1066,51 @@ export default function App() {
         }
     }, [])
 
+    // A drop can carry folders. The upload endpoint takes one file at a time, so
+    // that is not supported: folders are picked out here (the entries are only
+    // readable during the drop event) and reported instead of being sent, which
+    // would otherwise create an empty file named after each folder.
+    const splitDrop = (event) => {
+        const transfer = event.dataTransfer
+        const items = Array.from(transfer?.items ?? [])
+        const files = []
+        const folders = []
+        const entries = items.filter((item) => item.kind === 'file'
+            && typeof item.webkitGetAsEntry === 'function')
+        if (entries.length === 0) {
+            return { files: Array.from(transfer?.files ?? []), folders }
+        }
+        entries.forEach((item) => {
+            const file = item.getAsFile()
+            if (!file) {
+                return
+            }
+            const entry = item.webkitGetAsEntry()
+            if (entry && entry.isDirectory) {
+                folders.push(file.name)
+            } else {
+                files.push(file)
+            }
+        })
+        return { files, folders }
+    }
+
     const handleDragDrop = useCallback((event) => {
         if (!dragHasFiles(event)) {
             return
         }
         event.preventDefault()
         const destination = folderUnderPointer(event.clientX, event.clientY) || cwd
+        const { files, folders } = splitDrop(event)
         setUploadDrag({ visible: false, target: null })
-        uploadFiles(Array.from(event.dataTransfer.files), destination)
-    }, [cwd, folderUnderPointer, uploadFiles])
+        if (folders.length > 0) {
+            const listed = folders.slice(0, 3).join(', ') + (folders.length > 3 ? ', …' : '')
+            showNotice(folders.length === 1
+                ? `Folders cannot be uploaded, “${listed}” was skipped`
+                : `${folders.length} folders cannot be uploaded and were skipped: ${listed}`)
+        }
+        uploadFiles(files, destination)
+    }, [cwd, folderUnderPointer, uploadFiles, showNotice])
 
     const handleFilePickerChange = useCallback((event) => {
         const files = Array.from(event.target.files ?? [])
@@ -1096,6 +1153,12 @@ export default function App() {
             />
 
             <UploadHint visible={uploadDrag.visible} target={uploadDrag.target} />
+            {notice && (
+                <div className="app-notice" role="status">
+                    <i className="material-icons">folder_off</i>
+                    <span>{notice}</span>
+                </div>
+            )}
 
             <JobProgressPanel
                 visible={jobProgress.visible}
