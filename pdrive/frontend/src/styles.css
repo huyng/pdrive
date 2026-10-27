@@ -514,6 +514,49 @@ table th {
     user-select: none;
 }
 
+/* Folders expanded in place (list view) */
+
+table td .row-caret {
+    display: inline-block;
+    height: 18px;
+    line-height: 18px;
+    margin: 0 2px 0 -2px;
+    vertical-align: middle;
+    width: 18px;
+}
+
+/* the chevron itself, the slot next to a file stays inert */
+table td button.row-caret {
+    background: none;
+    border: 0;
+    border-radius: 3px;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    text-align: center;
+}
+
+table td button.row-caret:hover {
+    background: rgba(0, 0, 0, .1);
+}
+
+table td .row-caret .chevron {
+    display: block;
+    font-size: 18px;
+    line-height: 18px;
+    transition: transform .12s ease-in-out;
+}
+
+/* an open folder points its chevron down */
+table td .row-caret.expanded .chevron {
+    transform: rotate(90deg);
+}
+
+table tbody tr.loading-row td {
+    color: #909399;
+    font-style: italic;
+}
+
 /* Rules for sizing the icon. */
 
 .material-icons {

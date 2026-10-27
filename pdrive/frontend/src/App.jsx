@@ -68,6 +68,12 @@ export default function App() {
     const [showDotfiles, setShowDotfiles] = useState(false)
     const [sort, setSort] = useState({ column: 'mtime', order: 'descending' })
 
+    // Folders expanded in place in the list view: the paths that are open and
+    // the listing of each of them, fetched the first time it is needed.
+    const [expandedPaths, setExpandedPaths] = useState(() => new Set())
+    const [childListings, setChildListings] = useState(() => new Map())
+    const loadingChildren = useRef(new Set())
+
     const [menu, setMenu] = useState({ visible: false, x: 100, y: 100 })
     const [renameDialog, setRenameDialog] = useState({ visible: false, node: null, value: '' })
     const [copyDialog, setCopyDialog] = useState({ visible: false, node: null, value: '' })
@@ -82,6 +88,29 @@ export default function App() {
     ), [nodes, showDotfiles])
     const sortedNodes = useMemo(() => sortNodes(visibleNodes, sort), [visibleNodes, sort])
     const selectedNodes = useMemo(() => visibleNodes.filter((node) => node.isSelected), [visibleNodes])
+
+    // The rows of the list view: every expanded folder is followed by its
+    // contents, which are indented and can be expanded in turn.
+    const listRows = useMemo(() => {
+        const rows = []
+        const walk = (items, depth) => {
+            sortNodes(showDotfiles ? items : withoutDotfiles(items), sort).forEach((node) => {
+                rows.push({ node, depth })
+                if (node.type !== 'dir' || !expandedPaths.has(node.path)) {
+                    return
+                }
+                const children = childListings.get(node.path)
+                if (children) {
+                    walk(children, depth + 1)
+                } else {
+                    // still being fetched
+                    rows.push({ loading: true, path: node.path, depth: depth + 1 })
+                }
+            })
+        }
+        walk(nodes, 0)
+        return rows
+    }, [nodes, sort, showDotfiles, expandedPaths, childListings])
 
     // The files the preview dialog can show, in the order they appear on screen;
     // used for the prev/next arrows.
@@ -155,6 +184,60 @@ export default function App() {
             setHostname(data.hostname)
         }
         setNodes(data.nodes.map((node) => ({ ...node, isSelected: false })))
+        // an expanded folder belongs to the directory that was showing it
+        setExpandedPaths(new Set())
+        setChildListings(new Map())
+        loadingChildren.current.clear()
+    }, [])
+
+    // ---------------------------------------------------------------------
+    // Expanding folders in place (list view)
+    // ---------------------------------------------------------------------
+
+    const loadChildren = useCallback(async (path) => {
+        if (loadingChildren.current.has(path)) {
+            return
+        }
+        loadingChildren.current.add(path)
+        try {
+            const data = await postCommand({ command: 'ls', path })
+            setChildListings((prev) => {
+                const next = new Map(prev)
+                next.set(path, data.nodes)
+                return next
+            })
+        } catch (err) {
+            console.error('could not list', path, err)
+            setExpandedPaths((prev) => {
+                const next = new Set(prev)
+                next.delete(path)
+                return next
+            })
+        } finally {
+            loadingChildren.current.delete(path)
+        }
+    }, [])
+
+    // Expanded folders without a listing yet (just opened, or invalidated) are
+    // fetched here.
+    useEffect(() => {
+        expandedPaths.forEach((path) => {
+            if (!childListings.has(path)) {
+                loadChildren(path)
+            }
+        })
+    }, [expandedPaths, childListings, loadChildren])
+
+    const toggleExpanded = useCallback((path) => {
+        setExpandedPaths((prev) => {
+            const next = new Set(prev)
+            if (next.has(path)) {
+                next.delete(path)
+            } else {
+                next.add(path)
+            }
+            return next
+        })
     }, [])
 
     // Label the tab with the machine pdrive is serving files from. This is
@@ -794,9 +877,11 @@ export default function App() {
                             />
                         ) : (
                             <FileList
-                                nodes={sortedNodes}
+                                rows={listRows}
                                 sort={sort}
                                 dropTargetPath={dropTargetPath}
+                                expandedPaths={expandedPaths}
+                                onToggleExpand={toggleExpanded}
                                 onRowClick={handleRowClick}
                                 onRowRightClick={handleRowRightClick}
                                 onRowDoubleClick={handleRowDoubleClick}
