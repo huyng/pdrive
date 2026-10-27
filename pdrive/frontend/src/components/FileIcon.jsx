@@ -146,8 +146,17 @@ function Sheet({ kind, size }) {
     )
 }
 
-export default function FileIcon({ node, size = 18, className }) {
+// `dragHandle` makes the drawing itself start a drag to move, so a row can be
+// picked up by its icon as well as by its name.
+export default function FileIcon({ node, size = 18, className, dragHandle = false }) {
     const kind = iconKind(node)
     const drawing = kind === 'folder' ? <Folder size={size} /> : <Sheet kind={kind} size={size} />
-    return <span className={className ? `file-icon ${className}` : 'file-icon'}>{drawing}</span>
+    return (
+        <span
+            className={className ? `file-icon ${className}` : 'file-icon'}
+            data-drag-handle={dragHandle ? '' : undefined}
+        >
+            {drawing}
+        </span>
+    )
 }

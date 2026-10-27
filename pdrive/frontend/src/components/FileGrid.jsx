@@ -109,6 +109,7 @@ function TilePreview({ node }) {
     if (previewKind(node) === 'image') {
         return (
             <img
+                draggable={false}
                 width="64"
                 height="64"
                 style={{ border: '1px solid #eee', objectFit: 'cover' }}

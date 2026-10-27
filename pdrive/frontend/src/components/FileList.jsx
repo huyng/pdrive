@@ -50,7 +50,7 @@ function RowCaret({ node, expanded, onToggle }) {
 }
 
 function RowIcon({ node }) {
-    return <FileIcon node={node} size={18} />
+    return <FileIcon node={node} size={18} dragHandle />
 }
 
 export default function FileList({

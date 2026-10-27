@@ -35,7 +35,8 @@ export default function useDragMove({ containerRef, selectedPaths, onMove }) {
             return
         }
         const target = event.target
-        if (!(target instanceof HTMLElement)) {
+        // an icon is an <svg>, so this cannot ask for an HTMLElement
+        if (!(target instanceof Element)) {
             return
         }
         const handle = target.closest('[data-drag-handle]')

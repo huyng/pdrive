@@ -35,11 +35,15 @@ export default function useDragSelect({ selectedPaths, onSelect }) {
             return
         }
         const target = event.target
-        if (target instanceof HTMLElement && target.closest('input, textarea, select, button, a')) {
+        // an icon is an <svg>, so this cannot ask for an HTMLElement
+        if (!(target instanceof Element)) {
             return
         }
-        // filenames start a move drag instead, see useDragMove
-        if (target instanceof HTMLElement && target.closest('[data-drag-handle]')) {
+        if (target.closest('input, textarea, select, button, a')) {
+            return
+        }
+        // filenames and icons start a move drag instead, see useDragMove
+        if (target.closest('[data-drag-handle]')) {
             return
         }
         dragRef.current = {
