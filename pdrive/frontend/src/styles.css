@@ -459,12 +459,21 @@ button {
 
 .grid-item-preview {
     text-align: center;
-    /* the 64px drawing pushed down by its 13px of air, and nothing more: the
-       10px that used to be padding under the box are now the whole distance
-       to the filename, so the name sits under its icon instead of floating */
-    height: 77px;
-    margin-bottom: 10px;
+    /* the 64px drawing with the same 8px of air on every side, so that the
+       plate a selected tile gets sits centred behind it; the 4px below is the
+       whole distance to the filename */
+    height: 80px;
+    width: 80px;
+    margin: 0 auto 4px;
     vertical-align: middle;
+    transition: background-color .05s ease-in-out;
+}
+
+/* selecting a tile fills the plate behind the drawing with a soft grey; the
+   name underneath keeps the Finder's blue */
+.grid-view .grid-item.selected .grid-item-preview {
+    background: #EAECEF;
+    border-radius: 6px;
 }
 
 .grid-view .grid-item-preview img {
@@ -473,18 +482,18 @@ button {
        of the box, otherwise the tiles would differ by 2px in height */
     box-sizing: border-box;
     display: block;
-    margin: 13px auto 0;
+    margin: 8px auto 0;
     border-radius: 4px;
     /* the same lift the drawn icons get, a little softer since a photo has
        its own edges to sit on */
     box-shadow: 0 1px 3px rgba(0, 0, 0, .18);
 }
 
-/* the drawn folder and file icons, centred in the 100px header of a tile */
+/* the drawn folder and file icons, centred in the 80px plate of a tile */
 .grid-view .grid-item-preview .tile-icon {
     display: flex;
     justify-content: center;
-    padding-top: 13px;
+    padding-top: 8px;
 }
 
 .grid-view .grid-item .filename {
