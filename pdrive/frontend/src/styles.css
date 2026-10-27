@@ -465,12 +465,13 @@ button {
 }
 
 .grid-view .grid-item-preview img {
-    /* the 1px frame has to be part of the 100px box, otherwise image tiles
-       end up 2px taller than the icon and folder tiles */
+    /* a thumbnail is the same 64px box as the drawn icons, so a folder of
+       photos does not tower over the files around it; the 1px frame is part
+       of the box, otherwise the tiles would differ by 2px in height */
     box-sizing: border-box;
     display: block;
-    margin: 0 auto;
-    border-radius: 6px;
+    margin: 13px auto 0;
+    border-radius: 4px;
 }
 
 /* the drawn folder and file icons, centred in the 100px header of a tile */

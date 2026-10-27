@@ -109,8 +109,8 @@ function TilePreview({ node }) {
     if (previewKind(node) === 'image') {
         return (
             <img
-                width="100"
-                height="100"
+                width="64"
+                height="64"
                 style={{ border: '1px solid #eee', objectFit: 'cover' }}
                 alt={node.name}
                 src={serveUrl(node.path)}
