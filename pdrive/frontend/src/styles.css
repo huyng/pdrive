@@ -503,7 +503,7 @@ button {
 }
 
 .grid-view .grid-item.selected .filename {
-    background: #5858ff;
+    background: #0064E1;
     color: white;
     overflow-x: hidden;
 }
@@ -524,7 +524,9 @@ table thead {
 }
 
 table tr.selected {
-    background: #58B7FF;
+    /* NSColor.selectedContentBackgroundColor in the light appearance, which is
+       the blue the Finder fills a selected row with */
+    background: #0064E1;
     color: white;
 }
 
