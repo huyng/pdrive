@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import Modal from './Modal.jsx'
+import FileIcon from './FileIcon.jsx'
 import { fetchTextPreview, serveUrl } from '../api.js'
 import { formatSize, previewKind } from '../utils.js'
 
@@ -89,7 +90,7 @@ function PreviewBody({ node, kind }) {
     default:
         return (
             <div className="preview-placeholder">
-                <i className="material-icons">insert_drive_file</i>
+                <FileIcon node={node} size={48} />
                 No preview available for this file type.
             </div>
         )

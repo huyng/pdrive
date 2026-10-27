@@ -462,6 +462,13 @@ body {
     border-radius: 6px;
 }
 
+/* the drawn folder and file icons, centred in the 100px header of a tile */
+.grid-view .grid-item-preview .tile-icon {
+    display: flex;
+    justify-content: center;
+    padding-top: 13px;
+}
+
 .grid-view .grid-item .filename {
     border-radius: 4px;
     padding: 4px;
@@ -591,6 +598,25 @@ table tbody tr.loading-row td {
 }
 
 /* Rules for sizing the icon. */
+
+/* the folder and file icons of the listing, drawn as inline SVG */
+.file-icon {
+    display: inline-block;
+    line-height: 0;
+    vertical-align: middle;
+    /* a light shadow only: enough to lift the drawing off the white listing
+       and to keep the blue folder readable on the blue of a selected row,
+       without the halo a doubled-up shadow would give every icon */
+    filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .22));
+}
+
+tr.selected .file-icon {
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .45));
+}
+
+.file-icon svg {
+    display: block;
+}
 
 .material-icons {
     vertical-align: top;
@@ -761,21 +787,15 @@ audio.preview-media {
     text-align: center;
 }
 
-.preview-placeholder .material-icons {
-    color: #C0CCDA;
+.preview-placeholder .file-icon {
     display: block;
-    font-size: 48px;
-    margin-bottom: 8px;
+    margin: 0 auto 10px;
 }
 
 /* the "nothing to show" state sits on the backdrop, not on a white panel */
 .preview-content > .preview-placeholder {
     color: rgba(255, 255, 255, .55);
     padding: 64px 0;
-}
-
-.preview-content > .preview-placeholder .material-icons {
-    color: rgba(255, 255, 255, .3);
 }
 
 /* the one line of chrome under the file */

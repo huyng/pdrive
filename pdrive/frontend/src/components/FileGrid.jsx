@@ -6,6 +6,7 @@ import { useLayoutEffect, useMemo, useState } from 'react'
 
 import { serveUrl } from '../api.js'
 import { previewKind } from '../utils.js'
+import FileIcon from './FileIcon.jsx'
 
 // The CSS reserves two lines for every filename and clamps anything longer,
 // but a clamp cuts the name at the end and hides the file extension. Names
@@ -105,9 +106,6 @@ function fitNames(names) {
 }
 
 function TilePreview({ node }) {
-    if (node.type === 'dir') {
-        return <i className="material-icons" style={{ lineHeight: '100px', fontSize: '64px' }}>folder</i>
-    }
     if (previewKind(node) === 'image') {
         return (
             <img
@@ -119,14 +117,7 @@ function TilePreview({ node }) {
             />
         )
     }
-    return (
-        <i
-            className="material-icons md-24 md-dark"
-            style={{ lineHeight: '100px', fontSize: '64px' }}
-        >
-            insert_drive_file
-        </i>
-    )
+    return <FileIcon node={node} size={64} className="tile-icon" />
 }
 
 export default function FileGrid({ nodes, dropTargetPath, onRowClick, onRowRightClick, onRowDoubleClick }) {

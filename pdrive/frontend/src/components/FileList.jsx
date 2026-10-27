@@ -3,6 +3,7 @@
 // Licensed under the GNU General Public License v3 or later. See LICENSE.
 
 import { formatKind, formatSize, truncate } from '../utils.js'
+import FileIcon from './FileIcon.jsx'
 
 // How far the contents of an expanded folder are indented, in pixels.
 const INDENT = 18
@@ -49,9 +50,7 @@ function RowCaret({ node, expanded, onToggle }) {
 }
 
 function RowIcon({ node }) {
-    return node.type === 'dir'
-        ? <i className="material-icons md-18">folder</i>
-        : <i className="material-icons md-18 md-dark">insert_drive_file</i>
+    return <FileIcon node={node} size={18} />
 }
 
 export default function FileList({

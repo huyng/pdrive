@@ -160,6 +160,43 @@ export function previewKind(node) {
     return 'unsupported'
 }
 
+// The icon the listing draws for a node: folders apart, then the family of
+// the file. Archives and source code look like plain text to previewKind, so
+// they get an emblem of their own here.
+const ARCHIVE_EXTENSIONS = new Set([
+    'zip', 'tar', 'gz', 'tgz', 'bz2', 'tbz', 'xz', 'txz', 'zst', '7z', 'rar',
+    'dmg', 'iso', 'pkg', 'deb', 'rpm',
+])
+
+const CODE_EXTENSIONS = new Set([
+    'js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'vue', 'svelte', 'py', 'rb', 'go',
+    'rs', 'c', 'h', 'cc', 'cpp', 'hpp', 'cs', 'java', 'kt', 'swift', 'php',
+    'pl', 'lua', 'sh', 'bash', 'zsh', 'fish', 'sql', 'css', 'scss', 'sass',
+    'less', 'html', 'htm', 'xml', 'json', 'yml', 'yaml', 'toml', 'ini', 'mk',
+    'cmake', 'gradle',
+])
+
+export function iconKind(node) {
+    if (!node) {
+        return 'file'
+    }
+    if (node.type === 'dir') {
+        return 'folder'
+    }
+    const kind = previewKind(node)
+    if (kind !== 'text' && kind !== 'unsupported') {
+        return kind
+    }
+    const extension = extensionOf(node.name)
+    if (ARCHIVE_EXTENSIONS.has(extension)) {
+        return 'archive'
+    }
+    if (CODE_EXTENSIONS.has(extension)) {
+        return 'code'
+    }
+    return kind === 'text' ? 'text' : 'file'
+}
+
 // Copy text to the clipboard. The async clipboard API is only there on https
 // pages (and on localhost), so a plain http install - which is the usual way a
 // pdrive server on some other machine is reached - falls back to the old
