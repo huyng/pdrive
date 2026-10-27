@@ -472,6 +472,9 @@ button {
     display: block;
     margin: 13px auto 0;
     border-radius: 4px;
+    /* the same lift the drawn icons get, a little softer since a photo has
+       its own edges to sit on */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .18);
 }
 
 /* the drawn folder and file icons, centred in the 100px header of a tile */
