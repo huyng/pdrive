@@ -488,6 +488,13 @@ export default function App() {
         event.stopPropagation()
         setMenu((prev) => ({ ...prev, visible: false }))
 
+        // take the keyboard focus off whatever button was clicked last, or the
+        // space bar would activate that button (the chevron of a folder, say)
+        // instead of previewing the selection
+        if (event.detail > 0 && document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur()
+        }
+
         // Range selection follows the order the rows are drawn in, which
         // includes the contents of expanded folders.
         const order = listRows.filter((entry) => entry.node).map((entry) => entry.node.path)

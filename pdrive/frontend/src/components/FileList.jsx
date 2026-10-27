@@ -34,6 +34,12 @@ function RowCaret({ node, expanded, onToggle }) {
             onClick={(event) => {
                 // the row itself selects the folder, expanding must not
                 event.stopPropagation()
+                // A pointer click must not leave the keyboard focus on the
+                // chevron: the space bar would toggle the folder again instead
+                // of previewing whatever row is selected.
+                if (event.detail > 0) {
+                    event.currentTarget.blur()
+                }
                 onToggle(node.path)
             }}
         >

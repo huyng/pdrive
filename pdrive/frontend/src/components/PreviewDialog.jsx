@@ -2,11 +2,15 @@
 // Copyright (C) 2017 Huy Nguyen
 // Licensed under the GNU General Public License v3 or later. See LICENSE.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import Modal from './Modal.jsx'
 import { fetchTextPreview, serveUrl } from '../api.js'
 import { formatSize, previewKind } from '../utils.js'
+
+// how long the dialog stays in the DOM while it fades out, in milliseconds;
+// must match the exit animation in the stylesheet
+const CLOSE_MS = 140
 
 function TextPreview({ node }) {
     const [state, setState] = useState({ status: 'loading' })
@@ -93,6 +97,16 @@ function PreviewBody({ node, kind }) {
 }
 
 export default function PreviewDialog({ open, node, onClose, onDownload, onPrev, onNext, hasPrev, hasNext }) {
+    // The dialog outlives the node it shows by a few frames so that it can
+    // animate out: keep the last file (and its position in the listing) around
+    // for as long as it is still on screen.
+    const lastShown = useRef({ node, hasPrev, hasNext })
+    if (node) {
+        lastShown.current = { node, hasPrev, hasNext }
+    }
+    const shown = node ?? lastShown.current.node
+    const nav = node ? { hasPrev, hasNext } : lastShown.current
+
     // left/right step through the previewable files of the current folder
     useEffect(() => {
         if (!open) {
@@ -114,19 +128,20 @@ export default function PreviewDialog({ open, node, onClose, onDownload, onPrev,
         return () => document.removeEventListener('keydown', handleKeyDown)
     }, [open, hasPrev, hasNext, onPrev, onNext])
 
-    const kind = node ? previewKind(node) : 'unsupported'
+    const kind = shown ? previewKind(shown) : 'unsupported'
 
     return (
         <Modal
             open={open && Boolean(node)}
-            title={node ? node.name : ''}
+            title={shown ? shown.name : ''}
             className="modal-preview"
             backdropClassName="preview-backdrop"
+            closeDelay={CLOSE_MS}
             bare
             onClose={onClose}
         >
             <div className={'preview-content preview-content-' + kind}>
-                {node && <PreviewBody key={node.path} node={node} kind={kind} />}
+                {shown && <PreviewBody key={shown.path} node={shown} kind={kind} />}
             </div>
 
             <div className="preview-bar">
@@ -135,16 +150,16 @@ export default function PreviewDialog({ open, node, onClose, onDownload, onPrev,
                     className="preview-action"
                     title="Previous file"
                     aria-label="Previous file"
-                    disabled={!hasPrev}
+                    disabled={!nav.hasPrev}
                     onClick={onPrev}
                 >
                     <i className="material-icons md-18">chevron_left</i>
                 </button>
                 <div className="preview-caption">
-                    <span className="preview-name" title={node ? node.name : ''}>{node ? node.name : ''}</span>
-                    {node && (
+                    <span className="preview-name" title={shown ? shown.name : ''}>{shown ? shown.name : ''}</span>
+                    {shown && (
                         <span className="preview-detail">
-                            {node.type === 'file' ? formatSize(node) : '--'} · {node.mtime}
+                            {shown.type === 'file' ? formatSize(shown) : '--'} · {shown.mtime}
                         </span>
                     )}
                 </div>
@@ -153,7 +168,7 @@ export default function PreviewDialog({ open, node, onClose, onDownload, onPrev,
                     className="preview-action"
                     title="Next file"
                     aria-label="Next file"
-                    disabled={!hasNext}
+                    disabled={!nav.hasNext}
                     onClick={onNext}
                 >
                     <i className="material-icons md-18">chevron_right</i>

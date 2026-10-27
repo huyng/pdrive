@@ -2,13 +2,20 @@
 // Copyright (C) 2017 Huy Nguyen
 // Licensed under the GNU General Public License v3 or later. See LICENSE.
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 // Minimal modal dialog: rendered into document.body, closes on Escape or on a
 // click on the backdrop. A `bare` dialog gets no header or footer of its own,
 // the content brings all the chrome it needs.
-export default function Modal({ open, title, onClose, footer, className, backdropClassName, bare = false, children }) {
+//
+// `closeDelay` keeps the dialog mounted for that many milliseconds after it
+// closed, which gives a CSS exit animation the time to play; it has to match
+// the duration of the animation in the stylesheet.
+export default function Modal({ open, title, onClose, footer, className, backdropClassName, closeDelay = 0, bare = false, children }) {
+    const [mounted, setMounted] = useState(open)
+    // the dialog is on its way out: it is still in the DOM but fading away
+    const closing = mounted && !open && closeDelay > 0
     // keep the latest callback without re-running the effect below: it must not
     // re-run on every render, or the cleanup would steal focus from the dialog
     const onCloseRef = useRef(onClose)
@@ -36,7 +43,19 @@ export default function Modal({ open, title, onClose, footer, className, backdro
         }
     }, [open])
 
-    if (!open) {
+    useEffect(() => {
+        if (open) {
+            setMounted(true)
+            return undefined
+        }
+        if (!mounted || closeDelay <= 0) {
+            return undefined
+        }
+        const timer = setTimeout(() => setMounted(false), closeDelay)
+        return () => clearTimeout(timer)
+    }, [open, mounted, closeDelay])
+
+    if (!open && !closing) {
         return null
     }
 
@@ -48,7 +67,9 @@ export default function Modal({ open, title, onClose, footer, className, backdro
 
     return createPortal(
         <div
-            className={'modal-backdrop' + (backdropClassName ? ' ' + backdropClassName : '')}
+            className={'modal-backdrop'
+                + (backdropClassName ? ' ' + backdropClassName : '')
+                + (closing ? ' is-closing' : '')}
             onMouseDown={handleBackdropMouseDown}
         >
             <div className={'modal' + (className ? ' ' + className : '')} role="dialog" aria-modal="true" aria-label={title}>

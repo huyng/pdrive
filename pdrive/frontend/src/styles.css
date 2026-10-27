@@ -602,11 +602,37 @@ table tbody tr.loading-row td {
 /* File preview: the file itself on a dim backdrop, with one line of chrome
    underneath instead of a dialog with a header and a row of buttons. */
 
+/* the fade in on open and the fade out on close (kept in step with
+   PreviewDialog's CLOSE_MS) */
+@keyframes preview-fade-in {
+    from { opacity: 0; }
+}
+
+@keyframes preview-fade-out {
+    to { opacity: 0; }
+}
+
+@keyframes preview-pop-in {
+    from {
+        opacity: 0;
+        transform: scale(.985);
+    }
+}
+
+@keyframes preview-pop-out {
+    to {
+        opacity: 0;
+        transform: scale(.99);
+    }
+}
+
 .preview-backdrop {
+    animation: preview-fade-in 150ms ease-out;
     background: rgba(0, 0, 0, .82);
 }
 
 .modal-preview {
+    animation: preview-pop-in 180ms cubic-bezier(.2, .8, .3, 1);
     background: transparent;
     border-radius: 0;
     box-shadow: none;
@@ -616,6 +642,30 @@ table tbody tr.loading-row td {
     max-height: calc(100vh - 40px);
     max-width: calc(100vw - 40px);
     width: auto;
+}
+
+/* on the way out: no longer in the way of a click on the listing underneath */
+.preview-backdrop.is-closing {
+    animation: preview-fade-out 140ms ease-in forwards;
+    pointer-events: none;
+}
+
+.preview-backdrop.is-closing .modal-preview {
+    animation: preview-pop-out 140ms ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .preview-backdrop,
+    .modal-preview,
+    .preview-backdrop.is-closing,
+    .preview-backdrop.is-closing .modal-preview {
+        animation: none;
+    }
+
+    /* no fade to watch: get out of the way at once */
+    .preview-backdrop.is-closing {
+        opacity: 0;
+    }
 }
 
 .preview-content {
