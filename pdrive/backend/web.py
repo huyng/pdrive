@@ -32,6 +32,11 @@ from flask import render_template
 from flask import send_file
 from flask import send_from_directory
 
+try:
+    from .trash import move_to_trash
+except ImportError:  # running this file as a plain script, not a package
+    from trash import move_to_trash
+
 frontend_path = pth.join(
     pth.split(pth.split(pth.abspath(__file__))[0])[0], "frontend")
 
@@ -62,12 +67,40 @@ def api():
     else:
         payload = json.loads(payload)
         print(payload)
-        if payload["command"] == "rm":
-            paths = payload["paths"]
-            for p in paths:
-                rmfn = shutil.rmtree if os.path.isdir(p) else os.unlink
-                rmfn(p)
-            return json.dumps(payload)
+        if payload["command"] == "trash":
+            # Deleting is a move to the trash of the host system (the Recycle
+            # Bin, ~/.Trash, the freedesktop trash, ...), so an accidental
+            # click is always undoable. Every path is reported back: some may
+            # have made it while others did not, and the UI says so.
+            trashed = []
+            failed = []
+            for path in payload["paths"]:
+                try:
+                    trashed.append(move_to_trash(path) or path)
+                except OSError as error:
+                    failed.append({"path": path, "error": str(error)})
+            data = dict(payload)
+            data["trashed"] = trashed
+            data["failed"] = failed
+            return json.dumps(data)
+        elif payload["command"] == "rm":
+            # Permanent deletion. The UI only sends this after it has asked the
+            # user to confirm, because there is nothing to recover from here.
+            deleted = []
+            failed = []
+            for path in payload["paths"]:
+                try:
+                    if os.path.isdir(path) and not os.path.islink(path):
+                        shutil.rmtree(path)
+                    else:
+                        os.unlink(path)
+                    deleted.append(path)
+                except OSError as error:
+                    failed.append({"path": path, "error": str(error)})
+            data = dict(payload)
+            data["deleted"] = deleted
+            data["failed"] = failed
+            return json.dumps(data)
         elif payload["command"] == "ls":
             path = payload["path"]
             nodes = [process(pth.join(path, n)) for n in os.listdir(path)]

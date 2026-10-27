@@ -16,6 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import ConfirmDialog from './components/ConfirmDialog.jsx'
 import ContextMenu from './components/ContextMenu.jsx'
 import Dropdown from './components/Dropdown.jsx'
 import FileGrid from './components/FileGrid.jsx'
@@ -78,6 +79,9 @@ export default function App() {
     const [renameDialog, setRenameDialog] = useState({ visible: false, node: null, value: '' })
     const [copyDialog, setCopyDialog] = useState({ visible: false, node: null, value: '' })
     const [newFolderDialog, setNewFolderDialog] = useState({ visible: false, value: '' })
+    // the permanent delete is the one action that cannot be undone, so it gets
+    // a confirmation step and keeps the paths it was opened with
+    const [deleteDialog, setDeleteDialog] = useState({ visible: false, paths: [] })
     const [preview, setPreview] = useState({ open: false, node: null })
 
     const [overlayVisible, setOverlayVisible] = useState(false)
@@ -224,7 +228,8 @@ export default function App() {
             rename: single,
             copyPath: true,
             download: single,
-            delete: true,
+            trash: true,
+            deletePermanently: true,
         }
     }, [selectedNodes])
 
@@ -757,18 +762,71 @@ export default function App() {
         window.open(downloadUrl(selectedNodes[0].path))
     }, [selectedNodes])
 
-    const handleDeleteContextualMenu = useCallback(async () => {
+    // Nothing is unlinked here: the backend hands the paths to the trash of
+    // the host system (Recycle Bin, ~/.Trash, the freedesktop trash), so a
+    // misclick can always be taken back from the desktop.
+    const handleMoveToTrashContextualMenu = useCallback(async () => {
         const targets = selectedNodes
         if (targets.length === 0) {
             return
         }
+        let failed = []
         try {
-            await postCommand({ command: 'rm', paths: targets.map((node) => node.path) })
-            await reloadCurrent()
+            const result = await postCommand({
+                command: 'trash',
+                paths: targets.map((node) => node.path),
+            })
+            failed = result.failed || []
         } catch (err) {
-            console.error('could not delete', targets.map((node) => node.path), err)
+            console.error('could not move to trash', targets.map((node) => node.path), err)
+            failed = targets.map((node) => ({ path: node.path, error: String(err) }))
+        }
+        // some of a multiple selection may have gone through
+        await reloadCurrent()
+        if (failed.length > 0) {
+            alert(
+                'Could not move everything to the trash:\n' +
+                failed.map((item) => `${basename(item.path)}: ${item.error}`).join('\n')
+            )
         }
     }, [reloadCurrent, selectedNodes])
+
+    // The permanent delete is the one command that cannot be taken back, so
+    // the paths are captured here and nothing is sent until the confirmation
+    // dialog comes back with a yes.
+    const handleDeletePermanentlyContextualMenu = useCallback(() => {
+        if (selectedNodes.length === 0) {
+            return
+        }
+        setDeleteDialog({
+            visible: true,
+            paths: selectedNodes.map((node) => node.path),
+        })
+    }, [selectedNodes])
+
+    const confirmDeletePermanently = useCallback(async () => {
+        const paths = deleteDialog.paths
+        setDeleteDialog({ visible: false, paths: [] })
+        if (paths.length === 0) {
+            return
+        }
+        let failed = []
+        try {
+            const result = await postCommand({ command: 'rm', paths })
+            failed = result.failed || []
+        } catch (err) {
+            console.error('could not delete', paths, err)
+            failed = paths.map((path) => ({ path, error: String(err) }))
+        }
+        // some of a multiple selection may have gone through
+        await reloadCurrent()
+        if (failed.length > 0) {
+            alert(
+                'Could not delete everything:\n' +
+                failed.map((item) => `${basename(item.path)}: ${item.error}`).join('\n')
+            )
+        }
+    }, [deleteDialog.paths, reloadCurrent])
 
     // ---------------------------------------------------------------------
     // Dialogs
@@ -967,7 +1025,8 @@ export default function App() {
                 onRename={handleRenameContextualMenu}
                 onCopyPath={handleCopyPathContextualMenu}
                 onDownload={handleDownloadContextualMenu}
-                onDelete={handleDeleteContextualMenu}
+                onTrash={handleMoveToTrashContextualMenu}
+                onDeletePermanently={handleDeletePermanentlyContextualMenu}
             />
 
             <PromptDialog
@@ -999,6 +1058,18 @@ export default function App() {
                 onChange={(value) => setNewFolderDialog((prev) => ({ ...prev, value }))}
                 onConfirm={confirmNewFolder}
                 onCancel={() => setNewFolderDialog({ visible: false, value: '' })}
+            />
+
+            <ConfirmDialog
+                open={deleteDialog.visible}
+                title="Delete permanently?"
+                message={deleteDialog.paths.length === 1
+                    ? `“${basename(deleteDialog.paths[0] || '')}” will be deleted immediately. It will not go to the trash, and this cannot be undone.`
+                    : `${deleteDialog.paths.length} items will be deleted immediately. They will not go to the trash, and this cannot be undone.`}
+                confirmText="Delete"
+                danger
+                onConfirm={confirmDeletePermanently}
+                onCancel={() => setDeleteDialog({ visible: false, paths: [] })}
             />
 
             <PreviewDialog

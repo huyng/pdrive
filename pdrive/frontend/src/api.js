@@ -71,7 +71,7 @@ export async function fetchTextPreview(path, maxBytes = TEXT_PREVIEW_MAX_BYTES) 
 }
 
 // POST /api with a JSON payload describing a filesystem command
-// (ls, rm, mv, cp, mkdir). The backend reads it from the `payload` form field.
+// (ls, trash, mv, cp, mkdir). The backend reads it from the `payload` form field.
 export async function postCommand(payload) {
     const body = new URLSearchParams({ payload: JSON.stringify(payload) })
     return parseJson(await fetch('/api', { method: 'POST', body }))

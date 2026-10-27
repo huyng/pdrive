@@ -157,6 +157,24 @@ button {
     color: white;
 }
 
+/* the confirm button of a dialog whose action cannot be undone */
+.btn-danger {
+    background: #E03131;
+    border-color: #E03131;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #F03E3E;
+    border-color: #F03E3E;
+    color: white;
+}
+
+.btn-danger:focus-visible {
+    outline: 2px solid #E03131;
+    outline-offset: 1px;
+}
+
 /* Text input */
 
 .text-input {
@@ -210,6 +228,12 @@ button {
 
 .modal-body {
     padding: 20px;
+}
+
+.confirm-message {
+    color: #606266;
+    line-height: 1.5;
+    margin: 0;
 }
 
 .modal-footer {
@@ -434,6 +458,16 @@ button {
 
 .contextual-menu .contextual-menu-separator {
     border-top: 2px solid #E5E9F2;
+}
+
+/* the entry that throws data away instead of moving it to the trash */
+.contextual-menu .contextual-menu-danger {
+    color: #C92A2A;
+}
+
+.contextual-menu .contextual-menu-danger:hover {
+    background: #FFF0F0;
+    color: #C92A2A;
 }
 
 /* Grid View Styles */
