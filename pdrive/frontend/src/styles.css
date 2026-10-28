@@ -642,7 +642,7 @@ table td {
     /* the icons are 18px and the names 13px, so the row only needs a little
        more than its content; the listing stays compact as a Finder or Explorer
        window, which is what makes a long directory readable */
-    height: 34px;
+    height: 32px;
     padding-left: 18px;
     padding-right: 18px;
     cursor: default;
@@ -901,9 +901,13 @@ audio.preview-media {
     text-align: center;
 }
 
+/* block so that the message starts on its own line, but only as wide as the
+   drawing: a full-width block would leave the icon at the left edge, because
+   the auto margins then have nothing left to centre */
 .preview-placeholder .file-icon {
     display: block;
     margin: 0 auto 10px;
+    width: fit-content;
 }
 
 /* the "nothing to show" state sits on the backdrop, not on a white panel */
