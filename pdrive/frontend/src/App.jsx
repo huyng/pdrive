@@ -26,7 +26,7 @@ import JobProgressPanel from './components/JobProgressPanel.jsx'
 import PreviewDialog from './components/PreviewDialog.jsx'
 import PromptDialog from './components/PromptDialog.jsx'
 import UploadHint from './components/UploadHint.jsx'
-import { downloadUrl, fetchListing, postCommand, serveUrl, uploadFile } from './api.js'
+import { downloadUrl, fetchListing, postCommand, uploadFile } from './api.js'
 import useDragMove from './useDragMove.js'
 import useDragSelect from './useDragSelect.js'
 import { basename, copyToClipboard, isDotfile, previewKind, sortNodes, withoutDotfiles } from './utils.js'
@@ -709,15 +709,12 @@ export default function App() {
         setMenu({ visible: true, x: event.pageX, y: event.pageY })
     }, [applySelection])
 
+    // A double click opens the thing: a folder is entered, a file is previewed.
+    // It used to hand the file to the browser, which downloads what it cannot
+    // display - a click should not leave a file behind.
     const handleRowDoubleClick = useCallback((row) => {
-        if (row.type === 'file') {
-            // Hand the file to the browser: it displays what it can and
-            // downloads everything else (pressing space previews instead)
-            window.open(serveUrl(row.path))
-        } else {
-            openFolder(row.path)
-        }
-    }, [openFolder])
+        openPreview(row)
+    }, [openPreview])
 
     const handleSegmentClick = useCallback((segment) => {
         openFolder(segment.path)
