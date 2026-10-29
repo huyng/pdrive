@@ -2,6 +2,8 @@
 
 pdrive is a browser-based file manager. If you need a quick way of browsing files on a remote server, this is the tool for you.
 
+Long operations - uploading a file, compressing a folder, unpacking an archive - run as jobs in the server rather than in the request that started them, so the interface stays usable while they work and reports their progress instead of freezing on a spinner.
+
 
 ![pdrive](https://user-images.githubusercontent.com/121183/87987433-7e86fb00-ca93-11ea-9236-14823d0650c2.gif)
 

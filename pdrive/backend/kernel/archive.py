@@ -49,8 +49,12 @@ def archive_name(paths):
     return name if name.lower().endswith(".zip") else name + ".zip"
 
 
-def add_to_archive(zf, path, archive):
-    """Add ``path`` (a file, or a whole tree) to ``zf``, keeping its own name."""
+def add_to_archive(zf, path, archive, written=None):
+    """Add ``path`` (a file, or a whole tree) to ``zf``, keeping its own name.
+
+    ``written`` is called once per entry added, which is how the caller turns a
+    walk it cannot watch into a progress bar.
+    """
     if os.path.isdir(path) and not os.path.islink(path):
         base = pth.dirname(path)
         for root, dirs, files in os.walk(path):
@@ -60,14 +64,42 @@ def add_to_archive(zf, path, archive):
                        if pth.abspath(pth.join(root, name)) != pth.abspath(archive)]
             if not dirs and not files:
                 zf.writestr(relative + "/", "")
+                if written is not None:
+                    written()
             for name in files:
                 full = pth.join(root, name)
                 # the archive may be written into the tree it is archiving
                 if pth.abspath(full) == pth.abspath(archive):
                     continue
                 zf.write(full, pth.relpath(full, base).replace(os.sep, "/"))
+                if written is not None:
+                    written()
     else:
         zf.write(path, pth.basename(path))
+        if written is not None:
+            written()
+
+
+def count_entries(paths, archive=None):
+    """How many entries compressing ``paths`` will write.
+
+    A second walk, before the first one: the only way to say "3 of 2000" while
+    the archive is being written is to know the total beforehand, and nothing in
+    ``zipfile`` reports it.
+    """
+    total = 0
+    for path in paths:
+        if os.path.isdir(path) and not os.path.islink(path):
+            for root, dirs, files in os.walk(path):
+                if archive is not None:
+                    dirs[:] = [name for name in dirs if pth.abspath(
+                        pth.join(root, name)) != pth.abspath(archive)]
+                total += len(files)
+                if not dirs and not files:
+                    total += 1
+        else:
+            total += 1
+    return total
 
 
 def safe_target(destination, member):
@@ -94,11 +126,12 @@ def safe_target(destination, member):
     return target
 
 
-def zip_paths(payload):
+def zip_paths(payload, progress=None):
     """Compress the selection, skipping anything that disappeared meanwhile.
 
     The archive goes next to the selection under a name that is free, so a
     second compression of the same folder does not overwrite the first.
+    ``progress`` is called with a fraction between 0 and 1 as entries go in.
     """
     paths = [path for path in payload["paths"] if os.path.exists(path)]
     if not paths:
@@ -107,11 +140,21 @@ def zip_paths(payload):
     archive = unique_path(
         pth.join(destination, payload.get("name") or archive_name(paths)))
     failed = []
+    total = count_entries(paths, archive)
+    done = [0]
+
+    def written():
+        done[0] += 1
+        if progress is not None and total:
+            progress(min(done[0] / float(total), 1.0))
+
+    if progress is not None:
+        progress(0.0)
     try:
         with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zf:
             for path in paths:
                 try:
-                    add_to_archive(zf, path, archive)
+                    add_to_archive(zf, path, archive, written)
                 except OSError as error:
                     failed.append({"path": path, "error": str(error)})
     except OSError as error:
@@ -126,7 +169,7 @@ def zip_paths(payload):
     return data, 200
 
 
-def unzip_archive(payload):
+def unzip_archive(payload, progress=None):
     """Unpack next to the archive, refusing to write outside that folder."""
     archive = payload["path"]
     if not os.path.isfile(archive):
@@ -167,6 +210,8 @@ def unzip_archive(payload):
             }, 409
         failed = []
         extracted = 0
+        if progress is not None:
+            progress(0.0)
         for member, target in plans:
             try:
                 if member.endswith(("/", "\\")) or zf.getinfo(member).is_dir():
@@ -176,6 +221,8 @@ def unzip_archive(payload):
                 with zf.open(member) as src, open(target, "wb") as dst:
                     shutil.copyfileobj(src, dst)
                 extracted += 1
+                if progress is not None:
+                    progress(extracted / float(len(plans)))
             except (OSError, RuntimeError) as error:
                 # RuntimeError is what an encrypted member raises
                 failed.append({"path": target, "error": str(error)})

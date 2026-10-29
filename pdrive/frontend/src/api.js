@@ -75,18 +75,18 @@ export async function postCommand(payload) {
     return request(command, args)
 }
 
-// POST /upload as multipart form data. XMLHttpRequest is used instead of fetch
-// because it exposes upload progress events.
-export function uploadFile(file, basedir, { onProgress, onDone, onError } = {}) {
+// POST /upload as multipart form data. XMLHttpRequest is still used because the
+// upload has to be sendable while the page keeps working, but the progress it
+// can report is no longer read: the bytes are counted by the kernel, which
+// publishes them on the job the page opened for this upload.
+export function uploadFile(file, basedir, { job, onDone, onError } = {}) {
     const xhr = new XMLHttpRequest()
     const form = new FormData()
+    const query = job
+        ? `?job=${encodeURIComponent(job)}&name=${encodeURIComponent(file.name)}`
+        : ''
 
-    xhr.open('POST', '/upload', true)
-    xhr.onprogress = (event) => {
-        if (event.lengthComputable && onProgress) {
-            onProgress((event.loaded / event.total) * 100)
-        }
-    }
+    xhr.open('POST', '/upload' + query, true)
     xhr.onload = () => {
         if (xhr.status !== 200) {
             onError?.(new Error(`upload failed with status ${xhr.status}`))

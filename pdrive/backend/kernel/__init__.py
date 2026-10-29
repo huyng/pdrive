@@ -18,7 +18,10 @@
 
 Everything the server knows or does lives here rather than in the web layer, so
 that what answers a request stays a request-sized thing: `nodes` describe a file
-or directory to the UI, `fs` changes the filesystem, `archive` writes and reads
-zip files, and `commands` routes a command to one of them. The web layer is a
-transport: it parses, calls one of these and serialises the answer.
+or directory to the UI, `fs` changes the filesystem, `trash` hands an item to
+the desktop's own trash, `archive` writes and reads zip files, `commands` routes
+a command to one of them, and `jobs` runs the work that outlives its request and
+reports on it. `ws` is the other half of the transport: what `jobs` publishes to
+a page that is watching. The web layer is a transport: it parses, calls one of
+these and serialises the answer.
 """

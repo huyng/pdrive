@@ -58,7 +58,9 @@ from starlette.routing import WebSocketRoute
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket
 
+from .kernel import archive
 from .kernel import fs
+from .kernel import jobs
 from .kernel import ws
 from .kernel.commands import dispatch
 from .kernel.nodes import process
@@ -354,32 +356,100 @@ async def download_file(request):
                         content_disposition_type="attachment")
 
 
-def save_upload(source, destination):
+def save_upload(source, destination, size, report):
     # chunked, because the file may be larger than the memory this process is
     # allowed to use: the browser streams it in and it goes out to disk in the
     # same shape, never whole
+    written = 0
     with open(destination, "wb") as out:
         while True:
             chunk = source.read(1024 * 1024)
             if not chunk:
                 break
             out.write(chunk)
+            written += len(chunk)
+            if size:
+                report(written / float(size))
+    return written
 
 
 async def upload_file(request):
-    form = await request.form()
+    # The page names the job before it starts sending, so that the transfer
+    # itself can be watched: it subscribes to `job:<id>` and then posts the file
+    # with that id on the query string. Without one (a script) the job is minted
+    # here and the caller still gets its id back.
+    requested = request.query_params.get("job") or ""
+    # the page knows the file's name before the body arrives, so the panel can
+    # name the transfer from its first frame instead of its last
+    announced = pth.basename(request.query_params.get("name") or "")
+    job = jobs.get(requested)
+    if job is None or job.state != "running":
+        job = jobs.begin("upload", "Uploading %s" % (announced or "file"),
+                         job_id=requested)
+
+    length = request.headers.get("content-length", "")
+    total = int(length) if length.isdigit() else 0
+    received = [0]
+
+    async def counting_receive():
+        message = await request.receive()
+        if message["type"] == "http.request":
+            received[0] += len(message.get("body") or b"")
+            if total:
+                # the transfer is most of an upload and the write is the rest
+                jobs.advance(job, 0.9 * min(received[0] / float(total), 1.0))
+        return message
+
+    try:
+        form = await Request(request.scope, counting_receive).form()
+    except Exception:
+        jobs.fail(job, "could not read the upload", 400)
+        raise
     upload = form.get("file")
     basedir_arg = form.get("basedir")
     if not isinstance(basedir_arg, str) or not os.path.isdir(basedir_arg):
         # the folder was removed or renamed between the listing and the drop
+        jobs.fail(job, "no such directory", 400)
         return JSONResponse({"error": "no such directory"}, 400)
     if upload is None:
+        jobs.fail(job, "no file", 400)
         return JSONResponse({"error": "no file"}, 400)
+    name = pth.basename(upload.filename or "")
+    jobs.relabel(job, "Uploading %s" % name)
     # Only the base name is used: the folder is decided by where the file was
     # dropped, and a name like "../x" must not be able to write outside it.
-    fpath = os.path.join(basedir_arg, pth.basename(upload.filename or ""))
-    await asyncio.to_thread(save_upload, upload.file, fpath)
-    return JSONResponse(await asyncio.to_thread(process, fpath))
+    fpath = os.path.join(basedir_arg, name)
+    await asyncio.to_thread(save_upload, upload.file, fpath, upload.size,
+                            lambda progress: jobs.advance(job, 0.9 + 0.1 * progress))
+    node = await asyncio.to_thread(process, fpath)
+    jobs.finish(job, {"node": node})
+    return JSONResponse({"job": job.id, "node": node})
+
+
+def job_label(payload):
+    """What the progress panel calls this job."""
+    if payload.get("command") == "zip":
+        paths = payload.get("paths") or []
+        return "Compressing %s" % (payload.get("name") or archive.archive_name(paths))
+    return "Extracting %s" % pth.basename(payload.get("path") or "")
+
+
+async def api_jobs(request):
+    if request.method == "GET":
+        return JSONResponse({"jobs": jobs.listing()})
+    try:
+        payload = await request.json()
+    except ValueError:
+        return JSONResponse({"error": "bad json"}, 400)
+    if not isinstance(payload, dict) or payload.get("kind") not in ("zip", "unzip"):
+        return JSONResponse({"error": "unknown job kind"}, 400)
+    # the job runs the command the request described, so the result is the one
+    # `/api/cmd` would have answered with: same shape, same status
+    command = dict(payload)
+    command["command"] = payload["kind"]
+    job = jobs.begin(command["command"], job_label(command))
+    jobs.start(job, lambda report: dispatch(command, report))
+    return JSONResponse({"job": job.id})
 
 
 async def index_page(request):
@@ -390,6 +460,7 @@ async def index_page(request):
 routes = [
     Route("/api", api_listing, methods=["GET", "POST"]),
     Route("/api/cmd", api_cmd, methods=["POST"]),
+    Route("/api/jobs", api_jobs, methods=["GET", "POST"]),
     Route("/serve", serve_file),
     Route("/download", download_file),
     Route("/upload", upload_file, methods=["POST"]),

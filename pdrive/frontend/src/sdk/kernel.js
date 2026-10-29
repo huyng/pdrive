@@ -29,6 +29,7 @@ const subscribers = new Map()   // topic -> Set of callbacks
 const listeners = new Map()     // event name -> Set of callbacks
 
 let socket = null
+let keepOpen = false
 let requestId = 0
 let backoff = RECONNECT_MIN
 let retryTimer = null
@@ -66,6 +67,24 @@ export async function request(command, args = {}) {
     return parseJson(response)
 }
 
+// A job id the page can choose before it has anything to ask: an upload needs
+// to be watched while its bytes are still on the way, and the kernel only mints
+// ids for the requests that answer it in one piece.
+export function newJobId() {
+    const bytes = crypto.getRandomValues(new Uint8Array(4))
+    return 'j_' + [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+// POST /api/jobs: start work that outlives the request and returns its id.
+export async function startJob(kind, args = {}) {
+    const response = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind, ...args }),
+    })
+    return (await parseJson(response)).job
+}
+
 function emit(name, value) {
     for (const callback of listeners.get(name) ?? []) {
         callback(value)
@@ -89,8 +108,9 @@ function send(frame) {
 }
 
 function scheduleReconnect() {
-    // no topics, no reason to keep trying: the next subscriber opens a socket
-    if (retryTimer || subscribers.size === 0) {
+    // unless the page asked for a connection in the first place, nothing is
+    // waiting on this socket and there is no reason to keep trying
+    if (retryTimer || (!keepOpen && subscribers.size === 0)) {
         return
     }
     retryTimer = setTimeout(() => {
@@ -145,8 +165,16 @@ function open() {
     return socket
 }
 
-// Watch a topic. The returned function stops watching; the socket closes on
-// its own when the last subscription is gone.
+// Open the transport for the life of the page, whether or not anything is
+// subscribed yet: a page that only finds out the kernel is gone when it asks is
+// a page that shows a broken listing instead of a reconnecting one.
+export function connect() {
+    keepOpen = true
+    open()
+}
+
+// Watch a topic. The returned function stops watching; the connection stays
+// open, because the next question is only a request away.
 export function subscribe(topic, callback) {
     let callbacks = subscribers.get(topic)
     const first = !callbacks

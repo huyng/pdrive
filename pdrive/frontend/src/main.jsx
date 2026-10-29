@@ -18,7 +18,13 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 
 import Shell from './shell/Shell.jsx'
+import { connect } from './sdk/kernel.js'
 import './styles.css'
+
+// The event socket is opened before anything needs it, so that a server that is
+// gone shows up as "disconnected" instead of as a listing that stopped
+// answering.
+connect()
 
 createRoot(document.getElementById('root')).render(
     <React.StrictMode>

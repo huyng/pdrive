@@ -26,8 +26,13 @@ from . import archive
 from . import fs
 
 
-def dispatch(payload):
-    """Run one command. Returns ``(body, http status)``."""
+def dispatch(payload, progress=None):
+    """Run one command. Returns ``(body, http status)``.
+
+    ``progress`` is passed through to the commands that can report it - the two
+    archive operations - and called with a fraction between 0 and 1. Everything
+    else finishes too quickly for the number to be worth a frame.
+    """
     command = payload["command"]
 
     if command == "trash":
@@ -45,9 +50,9 @@ def dispatch(payload):
     if command == "mkdir":
         return fs.make_dir(payload["path"]), 200
     if command == "zip":
-        return archive.zip_paths(payload)
+        return archive.zip_paths(payload, progress)
     if command == "unzip":
-        return archive.unzip_archive(payload)
+        return archive.unzip_archive(payload, progress)
 
     # an unknown command is echoed back untouched, which is what the frontend
     # has always got and what tells it the kernel did not understand it

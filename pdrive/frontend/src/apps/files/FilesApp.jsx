@@ -27,6 +27,8 @@ import PreviewDialog from '../../components/PreviewDialog.jsx'
 import PromptDialog from '../../components/PromptDialog.jsx'
 import UploadHint from '../../components/UploadHint.jsx'
 import { downloadUrl, fetchListing, postCommand, uploadFile } from '../../api.js'
+import { newJobId, startJob } from '../../sdk/kernel.js'
+import { track } from '../../jobs.js'
 import useDragMove from '../../useDragMove.js'
 import useDragSelect from '../../useDragSelect.js'
 import { basename, copyToClipboard, isDotfile, previewKind, sortNodes, withoutDotfiles } from '../../utils.js'
@@ -98,7 +100,6 @@ export default function FilesApp() {
     // about but does not (a dropped folder, for instance).
     const [notice, setNotice] = useState(null)
     const noticeTimer = useRef(0)
-    const [jobProgress, setJobProgress] = useState({ visible: false, tasks: [] })
 
     const visibleNodes = useMemo(() => (
         showDotfiles ? nodes : withoutDotfiles(nodes)
@@ -781,70 +782,93 @@ export default function FilesApp() {
     // the way the Finder would (notes.txt.zip, Photos.zip, Archive.zip for a
     // multiple selection) and never overwrites: a second run leaves
     // "notes.txt 2.zip".
+    //
+    // The work is a job, so the answer arrives as an event rather than as the
+    // return value of the request: the panel shows "3 of 2000 files" while the
+    // page stays usable, and the listing is reloaded when the archive is there.
     const handleCompressContextualMenu = useCallback(async () => {
         const targets = selectedNodes
         if (targets.length === 0) {
             return
         }
-        let failed = []
+        let job
         try {
-            const result = await postCommand({
-                command: 'zip',
+            job = await startJob('zip', {
                 paths: targets.map((node) => node.path),
                 destination: cwd,
             })
-            failed = result.failed || []
         } catch (err) {
             console.error('could not compress', targets.map((node) => node.path), err)
             alert('Could not compress: ' + (err.payload?.error || err.message))
             return
         }
-        await reloadCurrent()
-        if (failed.length > 0) {
-            alert('Could not compress everything:\n'
-                + failed.map((item) => `${basename(item.path)}: ${item.error}`).join('\n'))
-        }
+        track(job, {
+            onDone: async (finished) => {
+                if (finished.state === 'error') {
+                    alert('Could not compress: '
+                        + (finished.result?.error || finished.error || 'unknown error'))
+                    return
+                }
+                await reloadCurrent()
+                const failed = finished.result?.failed || []
+                if (failed.length > 0) {
+                    alert('Could not compress everything:\n'
+                        + failed.map((item) => `${basename(item.path)}: ${item.error}`).join('\n'))
+                }
+            },
+        })
     }, [cwd, reloadCurrent, selectedNodes])
 
     // Unpack an archive in place. When the archive would overwrite something,
-    // the backend says what and the user decides once for the whole archive.
+    // the backend says what and the user decides once for the whole archive:
+    // the same job, started again with overwrite, since nothing was written.
     const handleExtractContextualMenu = useCallback(async () => {
         const node = selectedNodes[0]
         if (!isZipNode(node)) {
             return
         }
-        let result = null
+
+        const watch = (job) => track(job, {
+            onDone: async (finished) => {
+                if (finished.status === 409) {
+                    const count = finished.result?.count ?? 0
+                    const sample = (finished.result?.conflicts ?? []).slice(0, 3)
+                        .map((conflict) => basename(conflict)).join(', ')
+                    if (!window.confirm(`${count} item${count === 1 ? '' : 's'} already exist`
+                        + `${count === 1 ? 's' : ''} (${sample}). Replace ${count === 1 ? 'it' : 'them'}?`)) {
+                        return
+                    }
+                    try {
+                        watch(await startJob('unzip', { path: node.path, overwrite: true }))
+                    } catch (retryError) {
+                        alert(`Could not extract “${basename(node.path)}”: `
+                            + (retryError.payload?.error || retryError.message))
+                    }
+                    return
+                }
+                if (finished.state === 'error') {
+                    alert(`Could not extract “${basename(node.path)}”: `
+                        + (finished.result?.error || finished.error || 'unknown error'))
+                    return
+                }
+                await reloadCurrent()
+                const result = finished.result
+                const problems = (result?.failed || [])
+                    .map((item) => `${basename(item.path)}: ${item.error}`)
+                if (result?.skipped?.length) {
+                    problems.push(`${result.skipped.length} item(s) point outside the folder and were skipped`)
+                }
+                if (problems.length > 0) {
+                    alert('The archive was unpacked, but not everything:\n' + problems.join('\n'))
+                }
+            },
+        })
+
         try {
-            result = await postCommand({ command: 'unzip', path: node.path })
+            watch(await startJob('unzip', { path: node.path }))
         } catch (err) {
-            if (err.status !== 409) {
-                alert(`Could not extract “${basename(node.path)}”: `
-                    + (err.payload?.error || err.message))
-                return
-            }
-            const count = err.payload?.count ?? 0
-            const sample = (err.payload?.conflicts ?? []).slice(0, 3)
-                .map((conflict) => basename(conflict)).join(', ')
-            if (!window.confirm(`${count} item${count === 1 ? '' : 's'} already exist`
-                + `${count === 1 ? 's' : ''} (${sample}). Replace ${count === 1 ? 'it' : 'them'}?`)) {
-                return
-            }
-            try {
-                result = await postCommand({ command: 'unzip', path: node.path, overwrite: true })
-            } catch (retryError) {
-                alert(`Could not extract “${basename(node.path)}”: `
-                    + (retryError.payload?.error || retryError.message))
-                return
-            }
-        }
-        await reloadCurrent()
-        const problems = (result?.failed || [])
-            .map((item) => `${basename(item.path)}: ${item.error}`)
-        if (result?.skipped?.length) {
-            problems.push(`${result.skipped.length} item(s) point outside the folder and were skipped`)
-        }
-        if (problems.length > 0) {
-            alert('The archive was unpacked, but not everything:\n' + problems.join('\n'))
+            alert(`Could not extract “${basename(node.path)}”: `
+                + (err.payload?.error || err.message))
         }
     }, [reloadCurrent, selectedNodes])
 
@@ -996,13 +1020,6 @@ export default function FilesApp() {
     // Uploads (drag and drop, and the file picker)
     // ---------------------------------------------------------------------
 
-    const removeTask = useCallback((taskId) => {
-        setJobProgress((prev) => {
-            const tasks = prev.tasks.filter((task) => task.id !== taskId)
-            return { visible: tasks.length > 0, tasks }
-        })
-    }, [])
-
     // The folder row or tile under the pointer, or null over empty space. Hit
     // testing goes through the DOM (not a drop handler on the tile) so that a
     // drop anywhere in the window is handled in one place: the hint element is
@@ -1038,26 +1055,15 @@ export default function FilesApp() {
         }
 
         const into = destination === cwd ? null : basename(destination)
-        const taskId = `${Date.now()}-${Math.random().toString(16).slice(2)}`
-        setJobProgress((prev) => ({
-            visible: true,
-            tasks: [...prev.tasks, {
-                id: taskId,
-                message: into ? `${into}/${file.name}` : file.name,
-                progress: 0,
-            }],
-        }))
+        const label = 'Uploading ' + (into ? `${into}/${file.name}` : file.name)
+        const job = newJobId()
+        // watched before the first byte is sent, so the panel shows the
+        // transfer and not only its aftermath
+        track(job, { label })
 
         uploadFile(file, destination, {
-            onProgress: (percent) => {
-                setJobProgress((prev) => ({
-                    ...prev,
-                    tasks: prev.tasks.map((task) => (
-                        task.id === taskId ? { ...task, progress: percent } : task
-                    )),
-                }))
-            },
-            onDone: (node) => {
+            job,
+            onDone: ({ node }) => {
                 if (destination === cwd) {
                     setNodes((prev) => {
                         const index = prev.findIndex((n) => n.name === file.name)
@@ -1072,14 +1078,12 @@ export default function FilesApp() {
                     // the file is not in the directory on screen
                     invalidateChildren(destination)
                 }
-                setTimeout(() => removeTask(taskId), 2000)
             },
             onError: (err) => {
                 console.error('could not upload file', file.name, err)
-                setTimeout(() => removeTask(taskId), 2000)
             },
         })
-    }, [cwd, invalidateChildren, removeTask])
+    }, [cwd, invalidateChildren])
 
     // Upload a batch into one folder. Names already in that folder are the
     // things an overwrite confirmation is about, so the destination is listed
@@ -1211,10 +1215,6 @@ export default function FilesApp() {
         { key: 'upload', icon: 'file_upload', label: 'Upload' },
     ], [])
 
-    const handleJobProgressClose = useCallback(() => {
-        setJobProgress((prev) => ({ ...prev, visible: false }))
-    }, [])
-
     return (
         <div
             className="app"
@@ -1239,11 +1239,7 @@ export default function FilesApp() {
                 </div>
             )}
 
-            <JobProgressPanel
-                visible={jobProgress.visible}
-                tasks={jobProgress.tasks}
-                onClose={handleJobProgressClose}
-            />
+            <JobProgressPanel />
 
             <ContextMenu
                 visible={menu.visible}
