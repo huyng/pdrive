@@ -18,6 +18,14 @@ import { iconKind } from '../utils.js'
 const FOLDER_BACK = 'M8 20a8 8 0 0 1 8-8h8a6 6 0 0 1 4.5 2l3 3.5H48a8 8 0 0 1 8 8V27.5H8z'
 const FOLDER_FRONT = 'M8 23h48v21.5a8 8 0 0 1-8 8H16a8 8 0 0 1-8-8z'
 
+// Those paths are 48 wide by 40.5 tall, which still reads squat beside the
+// sheet of paper. Stretching them 12% about the middle of the drawing - the
+// same 12% the header mark gets in BrandLogo.jsx - squares the folder up
+// without widening it: the front panel ends at y 54.9, so 9 units of the 64
+// box are still empty below it and nothing is clipped.
+const FOLDER_SCALE_Y = 1.12
+const FOLDER_MID_Y = 32.25
+
 // Page: rounded corners, with the top right one cut short for the fold.
 const PAGE_BODY = 'M13 12a7 7 0 0 1 7-7h17.5L51 18.5V52a7 7 0 0 1-7 7H20a7 7 0 0 1-7-7z'
 const PAGE_FOLD = 'M37.5 5 51 18.5h-9.5a4 4 0 0 1-4-4z'
@@ -39,10 +47,12 @@ function Folder({ size }) {
                     <stop offset="1" stopColor="#2F82E2" />
                 </linearGradient>
             </defs>
-            <path d={FOLDER_BACK} fill={`url(#${id}-back)`} />
-            <path d={FOLDER_FRONT} fill={`url(#${id}-front)`} />
-            {/* the light catching the top edge of the front panel */}
-            <path d="M8 23.55h48" stroke="#FFFFFF" strokeOpacity=".45" strokeWidth="1.3" />
+            <g transform={`translate(0 ${FOLDER_MID_Y}) scale(1 ${FOLDER_SCALE_Y}) translate(0 -${FOLDER_MID_Y})`}>
+                <path d={FOLDER_BACK} fill={`url(#${id}-back)`} />
+                <path d={FOLDER_FRONT} fill={`url(#${id}-front)`} />
+                {/* the light catching the top edge of the front panel */}
+                <path d="M8 23.55h48" stroke="#FFFFFF" strokeOpacity=".45" strokeWidth="1.3" />
+            </g>
         </svg>
     )
 }
