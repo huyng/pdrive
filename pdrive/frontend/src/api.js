@@ -14,26 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-// Thin wrapper around the Flask API exposed by pdrive/backend/web.py
+// The file API, as the components know it: listing, inline and download URLs,
+// the text preview and the commands. Requests and their answers are shaped by
+// src/sdk/kernel.js, so a caller keeps asking for what it wants instead of
+// knowing which of the two transports carries it.
 
-async function parseJson(response) {
-    if (!response.ok) {
-        // A 401 means this browser is not carrying a valid token. There is no
-        // login screen to send the user to: the token is printed by the server,
-        // so the address it printed is the way back in.
-        const error = new Error(`${response.status} ${response.statusText}`)
-        error.status = response.status
-        // a refusal can say why ("these items exist", "not a zip archive"), and
-        // the caller is expected to show that instead of the status line
-        try {
-            error.payload = await response.json()
-        } catch (err) {
-            error.payload = null
-        }
-        throw error
-    }
-    return response.json()
-}
+import { parseJson, request } from './sdk/kernel.js'
 
 // GET /api -> { basedir, cwd, nodes }
 export async function fetchListing() {
@@ -82,11 +68,11 @@ export async function fetchTextPreview(path, maxBytes = TEXT_PREVIEW_MAX_BYTES) 
     }
 }
 
-// POST /api with a JSON payload describing a filesystem command
-// (ls, trash, mv, cp, mkdir). The backend reads it from the `payload` form field.
+// A filesystem command (ls, trash, mv, cp, mkdir, zip, unzip). The object keeps
+// the shape the call sites already build, `command` first.
 export async function postCommand(payload) {
-    const body = new URLSearchParams({ payload: JSON.stringify(payload) })
-    return parseJson(await fetch('/api', { method: 'POST', body }))
+    const { command, ...args } = payload
+    return request(command, args)
 }
 
 // POST /upload as multipart form data. XMLHttpRequest is used instead of fetch

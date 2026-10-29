@@ -16,14 +16,14 @@ authors = [
 keywords = [
     "file-manager",
     "file-browser",
-    "flask",
+    "starlette",
     "react",
     "web",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Web Environment",
-    "Framework :: Flask",
+    "Framework :: AsyncIO",
     "Intended Audience :: End Users/Desktop",
     "Operating System :: OS Independent",
     "Programming Language :: JavaScript",
@@ -37,8 +37,10 @@ classifiers = [
     "Topic :: System :: Filesystems",
 ]
 dependencies = [
-    "Flask",
-    "gunicorn",
+    "starlette",
+    "uvicorn",
+    "websockets",
+    "python-multipart",
 ]
 
 [project.urls]
@@ -47,7 +49,7 @@ Repository = "https://github.com/huyng/pdrive"
 Issues = "https://github.com/huyng/pdrive/issues"
 
 [project.scripts]
-pdrive = "pdrive.backend.web:main"
+pdrive = "pdrive.backend.server:main"
 
 # ---------------------------------------------------------------------------
 # Build configuration

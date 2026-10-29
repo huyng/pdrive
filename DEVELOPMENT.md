@@ -22,8 +22,8 @@ uv build               # -> dist/pdrive-<version>-py3-none-any.whl and .tar.gz
 The version lives in one place, `pyproject.toml` (`version = "..."`). PyPI
 refuses to accept the same version twice, so bump it before every upload.
 
-To try the result, install the package and run it — the Flask app serves
-`frontend/dist` from the installed package:
+To try the result, install the package and run it — the server (Starlette on
+uvicorn, one process) serves `frontend/dist` from the installed package:
 
 ```bash
 uv venv /tmp/t && uv pip install --python /tmp/t/bin/python dist/pdrive-*.whl
