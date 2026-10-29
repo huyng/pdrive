@@ -24,7 +24,15 @@ button {
 }
 
 .app {
+    /* The app is the window: the page itself never scrolls, and the listing
+       scrolls inside it. A column with a header that keeps its height and one
+       flexible row for everything else is what makes that free - no measuring,
+       no scroll listeners, and anything that scrolls is already inside a box
+       that knows its own size. */
+    display: flex;
+    flex-direction: column;
     height: 100%;
+    overflow: hidden;
 }
 
 .noselect {
@@ -85,6 +93,7 @@ button {
     padding: 4px 10px;
     box-sizing: border-box;
     display: flex;
+    flex: 0 0 auto;
     align-items: center;
     justify-content: space-between;
     /* the host name is centred against the bar itself */
@@ -407,6 +416,7 @@ button {
     color: white;
     display: flex;
     align-items: center;
+    flex: 0 0 auto;
     justify-content: space-between;
 }
 
@@ -604,7 +614,10 @@ button {
 table {
     width: 100%;
     display: table;
-    border-collapse: collapse;
+    /* Not `collapse`: a collapsed table drops a cell's own bottom rule the
+       moment the cell sticks, because the collapsed border belongs to the
+       table. Separate borders with no spacing draw the same lines. */
+    border-collapse: separate;
     border-spacing: 0;
     box-sizing: content-box;
     font-size: 13px;
@@ -659,6 +672,12 @@ table th {
     background-color: #EFF2F7;
     text-align: left;
     height: 34px;
+    /* the headings stay put while the rows run underneath them; the
+       background is opaque, so a row passing under is covered rather than
+       showing through */
+    position: sticky;
+    top: 0;
+    z-index: 2;
     padding-left: 18px;
     padding-right: 18px;
     cursor: pointer;
@@ -986,8 +1005,14 @@ audio.preview-media {
 
 /* Drag to select */
 
+/* The listing's own scroll. `min-height: 0` is what lets a flex item be
+   smaller than its content, which is the whole trick; `scroll-padding-top`
+   keeps a row scrolled into view from coming up under the sticky headings. */
 .selection-surface {
-    min-height: 1px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    scroll-padding-top: 35px;
 }
 
 body.drag-selecting {
@@ -1047,4 +1072,159 @@ table tbody tr.drop-target td {
     position: absolute;
     top: 0;
     visibility: hidden;
+}
+
+/* -------------------------------------------------------------------------
+   The preview, in its two frames: a dialog over the listing (above), and a
+   pane beside it (here). The body and the bar are the same component in both,
+   so everything in this section is about the frame and the sizes, not about
+   what is being shown.
+   ------------------------------------------------------------------------- */
+
+/* the listing and the pane share one row, and the row is the rest of the
+   window: the pane is as tall as it, and the listing scrolls inside its own
+   column rather than dragging the page along */
+.main-view {
+    align-items: stretch;
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.content-view {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+}
+
+.preview-sidebar {
+    background: #1F2D3D;
+    /* one thin line in the pane's own dark - the colour its toolbar sits on - so
+       the seam reads as the edge of the pane rather than as a line drawn beside
+       it, and it does not have to advertise that it can be dragged */
+    border-left: 1px solid #1F2D3D;
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    /* the row stretches it to the window, so it needs no height of its own and
+       no `position: sticky` - nothing scrolls behind it any more. It does still
+       have to be positioned: the resize strip is absolute, and without this it
+       would anchor to the window's edge instead of the pane's */
+    position: relative;
+    /* dragged by the user, in pixels, with the grab strip setting it; the
+       fallback is the width a pane opens at when nothing has been chosen */
+    width: var(--preview-width, 380px);
+    /* the listing keeps a slice of the window even after the pane was dragged
+       wide and the window was made narrower: the drag clamps too, but only at
+       the moment of the drag */
+    max-width: calc(100vw - 360px);
+}
+
+/* The grab strip is a hit area, not a handle you can see: nine pixels wide and
+   invisible, centred on the pane's one-pixel edge, which on its own is thin
+   enough to miss. `touch-action: none` keeps a touch drag from scrolling the
+   listing instead of resizing.
+   `left` counts from the padding box, so centring means clearing half the strip
+   and half the border: -(1/2 + 9/2) = -5px. */
+.preview-resize {
+    bottom: 0;
+    cursor: col-resize;
+    left: -5px;
+    position: absolute;
+    top: 0;
+    touch-action: none;
+    width: 9px;
+}
+
+/* The edge lights up only while it is being used - a drag, or keyboard focus -
+   so the pane stays a quiet pane until someone reaches for it. What lights up is
+   the border's own one pixel over the border, not the width of the hit area. */
+.preview-resize::after {
+    background: transparent;
+    bottom: 0;
+    content: '';
+    left: 4px;
+    position: absolute;
+    top: 0;
+    width: 1px;
+}
+
+/* the strip draws its own focus line, so the browser's box outline would be a
+   second, louder one */
+.preview-resize:focus-visible {
+    outline: none;
+}
+
+.preview-resize:focus-visible::after,
+body.resizing-preview .preview-resize::after {
+    background: #409EFF;
+}
+
+/* For the length of a drag the cursor and the selection belong to the drag, not
+   to whatever the pointer happens to be over - including a PDF's frame. */
+body.resizing-preview,
+body.resizing-preview * {
+    cursor: col-resize !important;
+    user-select: none !important;
+}
+
+body.resizing-preview .preview-content {
+    pointer-events: none;
+}
+
+/* The pane's bar is its header: the file, the arrows, the download and the way
+   out, at the top, where a panel's own controls belong. */
+.preview-sidebar .preview-bar {
+    padding: 4px 6px;
+}
+
+/* A pane is part of the window, not a card floating over one: nothing in it is
+   rounded, and a document fills it edge to edge. The dialog's rules are written
+   against the viewport (`calc(100vw - 40px)`), which in a narrow pane would ask
+   for more than the pane has and push the stage off the bottom, so the sizes are
+   the pane's. */
+.preview-sidebar .preview-content {
+    padding: 0;
+}
+
+.preview-sidebar .preview-text-panel,
+.preview-sidebar .preview-frame {
+    border-radius: 0;
+    height: 100%;
+    max-height: 100%;
+    width: 100%;
+}
+
+/* pictures and sound keep a little air, and are never rounded */
+.preview-sidebar .preview-media {
+    border-radius: 0;
+    max-height: calc(100% - 20px);
+    max-width: calc(100% - 20px);
+}
+
+.preview-sidebar audio.preview-media {
+    width: 100%;
+}
+
+/* A pane has to share the width with the listing, and below this the listing
+   would be the sliver instead: so on a narrow screen the pane lies over it. */
+@media (max-width: 700px) {
+    .preview-sidebar {
+        box-shadow: -10px 0 30px rgba(31, 45, 61, .3);
+        height: 100vh;
+        position: fixed;
+        right: 0;
+        top: 0;
+        /* an overlay here, not a column: it takes what it needs and leaves the
+           listing alone behind it, so there is nothing to drag */
+        max-width: none;
+        width: min(88vw, 460px);
+        z-index: 30;
+    }
+
+    .preview-resize {
+        display: none;
+    }
 }

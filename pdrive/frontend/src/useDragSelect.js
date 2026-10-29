@@ -70,16 +70,23 @@ export default function useDragSelect({ selectedPaths, onSelect }) {
     }, [])
 
     useEffect(() => {
-        const activate = (drag) => {
-            const container = containerRef.current
-            drag.active = true
-            drag.bounds = container.getBoundingClientRect()
-            // The listing does not scroll during a drag, so measuring once is
-            // enough and keeps the per-frame work to simple comparisons.
+        // Where the rows are on screen, and where the listing was scrolled to
+        // when we asked. Measuring is the expensive half of a drag, so it is
+        // done once and then only when the scroll position has moved under us.
+        const measure = (drag, container) => {
             drag.items = Array.from(container.querySelectorAll('[data-path]')).map((el) => ({
                 path: el.dataset.path,
                 rect: el.getBoundingClientRect(),
             }))
+            drag.scrollTop = container.scrollTop
+            drag.scrollLeft = container.scrollLeft
+        }
+
+        const activate = (drag) => {
+            const container = containerRef.current
+            drag.active = true
+            drag.bounds = container.getBoundingClientRect()
+            measure(drag, container)
             document.body.classList.add('drag-selecting')
         }
 
@@ -87,6 +94,13 @@ export default function useDragSelect({ selectedPaths, onSelect }) {
             const drag = dragRef.current
             if (!drag || !drag.active) {
                 return
+            }
+            // The listing can scroll mid-drag - the wheel, or a scrollbar drag.
+            // The marquee is a fixed overlay in viewport coordinates, so it
+            // needs no help; the rows it is testing do.
+            const container = containerRef.current
+            if (container && (container.scrollTop !== drag.scrollTop || container.scrollLeft !== drag.scrollLeft)) {
+                measure(drag, container)
             }
             const left = Math.min(Math.max(Math.min(drag.startX, x), drag.bounds.left), drag.bounds.right)
             const top = Math.min(Math.max(Math.min(drag.startY, y), drag.bounds.top), drag.bounds.bottom)

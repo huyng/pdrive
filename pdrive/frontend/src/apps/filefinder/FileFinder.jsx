@@ -24,6 +24,7 @@ import FileGrid from '../../components/FileGrid.jsx'
 import FileList from '../../components/FileList.jsx'
 import JobProgressPanel from '../../components/JobProgressPanel.jsx'
 import PreviewDialog from '../../components/PreviewDialog.jsx'
+import PreviewSidebar from './PreviewSidebar.jsx'
 import PromptDialog from '../../components/PromptDialog.jsx'
 import UploadHint from '../../components/UploadHint.jsx'
 import { downloadUrl, fetchListing, postCommand, uploadFile } from '../../api.js'
@@ -31,13 +32,29 @@ import { newJobId, startJob } from '../../sdk/kernel.js'
 import { track } from '../../jobs.js'
 import useDragMove from '../../useDragMove.js'
 import useDragSelect from '../../useDragSelect.js'
-import { basename, copyToClipboard, isDotfile, previewKind, sortNodes, withoutDotfiles } from '../../utils.js'
+import { basename, copyToClipboard, isDotfile, sortNodes, withoutDotfiles } from '../../utils.js'
+import { viewerFor } from './viewers/index.js'
 
 // The current directory is mirrored into the URL hash so that the browser's
 // back/forward buttons (and their keyboard shortcuts) move between visited
 // directories. A hash is used instead of a real path because the backend only
 // serves index.html from "/".
 const PATH_HASH_PREFIX = '#path='
+
+// Where a preview appears: a dialog over the listing, or a pane beside it. This
+// is a workspace preference rather than a property of the folder being visited,
+// so it is the one piece of view state that outlives a reload - sort order and
+// the list/grid choice are picked per folder and per visit, this is picked once.
+const PREVIEW_MODE_KEY = 'pdrive.previewMode'
+
+function storedPreviewMode() {
+    try {
+        return window.localStorage.getItem(PREVIEW_MODE_KEY) === 'sidebar' ? 'sidebar' : 'modal'
+    } catch (err) {
+        // private mode: no preference, so the default one
+        return 'modal'
+    }
+}
 
 function pathFromLocation() {
     const { hash } = window.location
@@ -91,6 +108,15 @@ export default function FileFinder() {
     // a confirmation step and keeps the paths it was opened with
     const [deleteDialog, setDeleteDialog] = useState({ visible: false, paths: [] })
     const [preview, setPreview] = useState({ open: false, node: null })
+    const [previewMode, setPreviewMode] = useState(storedPreviewMode)      // modal | sidebar
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(PREVIEW_MODE_KEY, previewMode)
+        } catch (err) {
+            // nothing to remember it with; the session still works
+        }
+    }, [previewMode])
 
     // Files dragged in from outside the browser: the hint follows the drag,
     // `target` is the folder tile or row under the pointer, if any.
@@ -141,11 +167,13 @@ export default function FileFinder() {
         return rows
     }, [nodes, sort, showDotfiles, expandedPaths, childListings])
 
-    // The files the preview dialog can show, in the order they appear on screen;
-    // used for the prev/next arrows.
+    // The files a viewer can show, in the order they appear on screen; used for
+    // the prev/next arrows. It asks the viewer registry the same question the
+    // dialog asks, so a file the arrows skip is exactly a file the dialog would
+    // have had nothing to put in its place.
     const previewableNodes = useMemo(
         () => listRows
-            .filter((row) => row.node && previewKind(row.node) !== 'unsupported')
+            .filter((row) => row.node && viewerFor(row.node) !== null)
             .map((row) => row.node),
         [listRows],
     )
@@ -1300,16 +1328,18 @@ export default function FileFinder() {
                 onCancel={() => setDeleteDialog({ visible: false, paths: [] })}
             />
 
-            <PreviewDialog
-                open={preview.open}
-                node={preview.node}
-                onClose={closePreview}
-                onDownload={handlePreviewDownload}
-                onPrev={handlePreviewPrev}
-                onNext={handlePreviewNext}
-                hasPrev={previewIndex > 0}
-                hasNext={previewIndex >= 0 && previewIndex < previewableNodes.length - 1}
-            />
+            {previewMode === 'modal' && (
+                <PreviewDialog
+                    open={preview.open}
+                    node={preview.node}
+                    onClose={closePreview}
+                    onDownload={handlePreviewDownload}
+                    onPrev={handlePreviewPrev}
+                    onNext={handlePreviewNext}
+                    hasPrev={previewIndex > 0}
+                    hasNext={previewIndex >= 0 && previewIndex < previewableNodes.length - 1}
+                />
+            )}
 
             {/* Header Bar */}
             <div className="header-bar">
@@ -1344,6 +1374,32 @@ export default function FileFinder() {
                             onClick={() => setViewMode('grid')}
                         >
                             <i className="material-icons">grid_view</i>
+                        </button>
+                    </div>
+
+                    {/* Where the preview appears: over the listing, or beside
+                        it. Two buttons rather than one toggle so that the
+                        current choice is visible without hovering. */}
+                    <div className="header-bar-button-group">
+                        <button
+                            type="button"
+                            title="Preview in a dialog"
+                            aria-label="Preview in a dialog"
+                            aria-pressed={previewMode === 'modal'}
+                            className={'header-bar-button' + (previewMode === 'modal' ? ' active' : '')}
+                            onClick={() => setPreviewMode('modal')}
+                        >
+                            <i className="material-icons">picture_in_picture</i>
+                        </button>
+                        <button
+                            type="button"
+                            title="Preview in the sidebar"
+                            aria-label="Preview in the sidebar"
+                            aria-pressed={previewMode === 'sidebar'}
+                            className={'header-bar-button' + (previewMode === 'sidebar' ? ' active' : '')}
+                            onClick={() => setPreviewMode('sidebar')}
+                        >
+                            <i className="material-icons">vertical_split</i>
                         </button>
                     </div>
 
@@ -1427,6 +1483,22 @@ export default function FileFinder() {
                         {marquee && <div className="selection-rect" style={marquee} />}
                     </div>
                 </div>
+
+                {/* The other frame the preview can appear in. It is a sibling
+                    of the listing rather than an overlay, which is the whole
+                    point: browsing continues beside it. */}
+                {previewMode === 'sidebar' && (
+                    <PreviewSidebar
+                        open={preview.open}
+                        node={preview.node}
+                        onClose={closePreview}
+                        onDownload={handlePreviewDownload}
+                        onPrev={handlePreviewPrev}
+                        onNext={handlePreviewNext}
+                        hasPrev={previewIndex > 0}
+                        hasNext={previewIndex >= 0 && previewIndex < previewableNodes.length - 1}
+                    />
+                )}
             </div>
 
             {moveGhost && (
