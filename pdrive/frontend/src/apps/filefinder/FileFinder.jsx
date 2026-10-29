@@ -67,7 +67,7 @@ function writeLocationPath(path, { replace = false } = {}) {
     }
 }
 
-export default function FilesApp() {
+export default function FileFinder() {
     const [basedir, setBasedir] = useState('')
     const [cwd, setCwd] = useState('')
     const [hostname, setHostname] = useState(null)          // null until the backend reports it
