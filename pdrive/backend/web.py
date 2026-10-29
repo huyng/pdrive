@@ -25,9 +25,7 @@ import hmac
 import ipaddress
 import json
 import secrets
-import shutil
 import string
-import zipfile
 
 from argparse import ArgumentParser
 from urllib.parse import urlencode
@@ -36,14 +34,11 @@ from flask import Flask
 from flask import make_response
 from flask import redirect
 from flask import request
-from flask import render_template
 from flask import send_file
-from flask import send_from_directory
 
-try:
-    from .trash import move_to_trash
-except ImportError:  # running this file as a plain script, not a package
-    from trash import move_to_trash
+from .kernel import fs
+from .kernel.commands import dispatch
+from .kernel.nodes import process
 
 frontend_path = pth.join(
     pth.split(pth.split(pth.abspath(__file__))[0])[0], "frontend")
@@ -55,8 +50,10 @@ app = Flask(__name__,
             static_url_path="")
 
 
-basedir = os.path.abspath(os.curdir)
-hostname = platform.node()
+# the directory this server was started in, and the machine it runs on: kernel
+# state that the upload and index routes still read from here
+basedir = fs.basedir
+hostname = fs.hostname
 
 
 # ---------------------------------------------------------------------------
@@ -236,175 +233,17 @@ def require_token():
     return make_response(AUTH_FAILURE_PAGE, 401)
 
 
+# Every route below is a transport: parse the request, hand it to the kernel,
+# serialise the answer. Anything that knows how to do work lives in `kernel/`.
 @app.route("/api", methods=["GET", "POST"])
 def api():
-    global basedir
     payload = request.form.get("payload")
     if payload is None:
-        nodes = [process(pth.join(basedir, n)) for n in os.listdir(basedir)]
-        data = {
-            "basedir": basedir,
-            "cwd": basedir,
-            "hostname": hostname,
-            "nodes": nodes
-        }
-        return json.dumps(data)
-    else:
-        payload = json.loads(payload)
-        print(payload)
-        if payload["command"] == "trash":
-            # Deleting is a move to the trash of the host system (the Recycle
-            # Bin, ~/.Trash, the freedesktop trash, ...), so an accidental
-            # click is always undoable. Every path is reported back: some may
-            # have made it while others did not, and the UI says so.
-            trashed = []
-            failed = []
-            for path in payload["paths"]:
-                try:
-                    trashed.append(move_to_trash(path) or path)
-                except OSError as error:
-                    failed.append({"path": path, "error": str(error)})
-            data = dict(payload)
-            data["trashed"] = trashed
-            data["failed"] = failed
-            return json.dumps(data)
-        elif payload["command"] == "rm":
-            # Permanent deletion. The UI only sends this after it has asked the
-            # user to confirm, because there is nothing to recover from here.
-            deleted = []
-            failed = []
-            for path in payload["paths"]:
-                try:
-                    if os.path.isdir(path) and not os.path.islink(path):
-                        shutil.rmtree(path)
-                    else:
-                        os.unlink(path)
-                    deleted.append(path)
-                except OSError as error:
-                    failed.append({"path": path, "error": str(error)})
-            data = dict(payload)
-            data["deleted"] = deleted
-            data["failed"] = failed
-            return json.dumps(data)
-        elif payload["command"] == "ls":
-            path = payload["path"]
-            nodes = [process(pth.join(path, n)) for n in os.listdir(path)]
-            data = {
-                "basedir": basedir,
-                "cwd": path,
-                "hostname": hostname,
-                "nodes": nodes
-            }
-            return json.dumps(data)
-        elif payload["command"] == "mv":
-            paths = payload["paths"]
-            destination = payload["destination"]
-            for p in paths:
-                shutil.move(p, destination)
-            return json.dumps(payload)
-        elif payload["command"] == "cp":
-            paths = payload["paths"]
-            destination = payload["destination"]
-            for p in paths:
-                name = os.path.split(p)[1]
-                copy = shutil.copytree if os.path.isdir(p) else shutil.copy
-                dest = pth.join(destination, name) if os.path.isdir(
-                    destination) and os.path.isdir(p) else destination
-                copy(p, dest)
-            return json.dumps(payload)
-
-        elif payload["command"] == "mkdir":
-            path = payload["path"]
-            if not os.path.exists(path):
-                os.makedirs(path)
-            return json.dumps(process(path))
-
-        elif payload["command"] == "zip":
-            paths = [path for path in payload["paths"] if os.path.exists(path)]
-            if not paths:
-                return json.dumps({"error": "nothing to compress"}), 400
-            destination = payload.get("destination") or pth.dirname(paths[0])
-            archive = unique_path(
-                pth.join(destination, payload.get("name") or archive_name(paths)))
-            failed = []
-            try:
-                with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zf:
-                    for path in paths:
-                        try:
-                            add_to_archive(zf, path, archive)
-                        except OSError as error:
-                            failed.append({"path": path, "error": str(error)})
-            except OSError as error:
-                # a half written archive is worse than none
-                if os.path.exists(archive):
-                    os.unlink(archive)
-                return json.dumps({"error": str(error)}), 500
-            data = dict(payload)
-            data["archive"] = archive
-            data["failed"] = failed
-            data["node"] = process(archive)
-            return json.dumps(data)
-
-        elif payload["command"] == "unzip":
-            archive = payload["path"]
-            if not os.path.isfile(archive):
-                return json.dumps({"error": "no such file"}), 404
-            try:
-                zf = zipfile.ZipFile(archive)
-            except zipfile.BadZipFile:
-                return json.dumps({"error": "not a zip archive"}), 400
-            with zf:
-                members = [name for name in zf.namelist() if name.strip("/\\")]
-                base = pth.dirname(archive)
-                # like the Finder: several items are unpacked into a folder
-                # named after the archive, a single one next to it
-                tops = set()
-                for member in members:
-                    entry = member.replace("\\", "/").strip("/").split("/")[0]
-                    if entry:
-                        tops.add(entry)
-                destination = base
-                if len(tops) > 1:
-                    destination = unique_path(pth.join(
-                        base, pth.splitext(pth.basename(archive))[0]))
-                plans = []
-                skipped = []
-                for member in members:
-                    target = safe_target(destination, member)
-                    if target is None:
-                        skipped.append(member)
-                    else:
-                        plans.append((member, target))
-                conflicts = [target for _, target in plans if os.path.exists(target)]
-                if conflicts and not payload.get("overwrite"):
-                    # the caller asks the user and comes back with overwrite
-                    return json.dumps({
-                        "error": "exists",
-                        "conflicts": conflicts[:20],
-                        "count": len(conflicts),
-                    }), 409
-                failed = []
-                extracted = 0
-                for member, target in plans:
-                    try:
-                        if member.endswith(("/", "\\")) or zf.getinfo(member).is_dir():
-                            os.makedirs(target, exist_ok=True)
-                            continue
-                        os.makedirs(pth.dirname(target), exist_ok=True)
-                        with zf.open(member) as src, open(target, "wb") as dst:
-                            shutil.copyfileobj(src, dst)
-                        extracted += 1
-                    except (OSError, RuntimeError) as error:
-                        # RuntimeError is what an encrypted member raises
-                        failed.append({"path": target, "error": str(error)})
-            data = dict(payload)
-            data["destination"] = destination
-            data["extracted"] = extracted
-            data["skipped"] = skipped
-            data["failed"] = failed
-            return json.dumps(data)
-
-        return json.dumps(payload)
+        return json.dumps(fs.list_dir(basedir))
+    payload = json.loads(payload)
+    print(payload)
+    data, status = dispatch(payload)
+    return json.dumps(data), status
 
 
 @app.route("/serve")
@@ -445,108 +284,6 @@ def upload_file():
 @app.route("/")
 def index_page():
     return send_file(pth.join(frontend_path, "dist", "index.html"))
-
-
-def unique_path(path):
-    """``path`` if it is free, else "name 2.ext", "name 3.ext", ... (Finder's way)."""
-    if not os.path.exists(path):
-        return path
-    stem, extension = pth.splitext(path)
-    counter = 2
-    while os.path.exists("%s %d%s" % (stem, counter, extension)):
-        counter += 1
-    return "%s %d%s" % (stem, counter, extension)
-
-
-def archive_name(paths):
-    """The name the Finder would give the archive of this selection."""
-    if len(paths) != 1:
-        return "Archive.zip"
-    name = pth.basename(paths[0].rstrip("/\\")) or "Archive"
-    return name if name.lower().endswith(".zip") else name + ".zip"
-
-
-def add_to_archive(zf, path, archive):
-    """Add ``path`` (a file, or a whole tree) to ``zf``, keeping its own name."""
-    if os.path.isdir(path) and not os.path.islink(path):
-        base = pth.dirname(path)
-        for root, dirs, files in os.walk(path):
-            relative = pth.relpath(root, base).replace(os.sep, "/")
-            # an empty directory only survives as an entry of its own
-            dirs[:] = [name for name in dirs
-                       if pth.abspath(pth.join(root, name)) != pth.abspath(archive)]
-            if not dirs and not files:
-                zf.writestr(relative + "/", "")
-            for name in files:
-                full = pth.join(root, name)
-                # the archive may be written into the tree it is archiving
-                if pth.abspath(full) == pth.abspath(archive):
-                    continue
-                zf.write(full, pth.relpath(full, base).replace(os.sep, "/"))
-    else:
-        zf.write(path, pth.basename(path))
-
-
-def safe_target(destination, member):
-    """Where a zip member may be written, or None if it points outside.
-
-    Archive entries are plain strings, so "../.." or an absolute path in one
-    would otherwise write anywhere on the filesystem.
-    """
-    if member.startswith(("/", "\\")):
-        return None
-    components = []
-    for component in member.replace("\\", "/").split("/"):
-        if component in ("", "."):
-            continue
-        if component == ".." or ":" in component:
-            return None
-        components.append(component)
-    if not components:
-        return None
-    root = pth.abspath(destination)
-    target = pth.abspath(pth.join(root, *components))
-    if target != root and not target.startswith(root + os.sep):
-        return None
-    return target
-
-
-def process(path):
-    import os
-    import stat
-    import datetime
-    import mimetypes
-
-    def timestamp(seconds):
-        # local time, and a format that also sorts correctly as a string
-        return datetime.datetime.fromtimestamp(seconds).strftime("%Y-%m-%d %H:%M:%S")
-
-    name = pth.split(path)[1]
-    statinfo = os.stat(path)
-
-    if stat.S_ISDIR(statinfo.st_mode):
-        node_type = "dir"
-    else:
-        node_type = "file"
-
-    mimetype = None
-    if node_type == "file":
-        mimetype, _ = mimetypes.guess_type(path)
-
-    # st_birthtime is the real creation time (macOS, Windows, some BSDs).
-    # Platforms without it (Linux) fall back to st_ctime, the last inode
-    # change, which is the closest thing they have.
-    created = getattr(statinfo, "st_birthtime", None) or statinfo.st_ctime
-
-    return {
-        "name": name,
-        "path": path,
-        "type": node_type,
-        "mimetype": mimetype,
-        "size": statinfo.st_size,
-        "ctime": timestamp(created),
-        "mtime": timestamp(statinfo.st_mtime)
-    }
 
 
 def print_banner(args):

@@ -16,20 +16,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import BrandLogo from './components/BrandLogo.jsx'
-import ConfirmDialog from './components/ConfirmDialog.jsx'
-import ContextMenu from './components/ContextMenu.jsx'
-import Dropdown from './components/Dropdown.jsx'
-import FileGrid from './components/FileGrid.jsx'
-import FileList from './components/FileList.jsx'
-import JobProgressPanel from './components/JobProgressPanel.jsx'
-import PreviewDialog from './components/PreviewDialog.jsx'
-import PromptDialog from './components/PromptDialog.jsx'
-import UploadHint from './components/UploadHint.jsx'
-import { downloadUrl, fetchListing, postCommand, uploadFile } from './api.js'
-import useDragMove from './useDragMove.js'
-import useDragSelect from './useDragSelect.js'
-import { basename, copyToClipboard, isDotfile, previewKind, sortNodes, withoutDotfiles } from './utils.js'
+import BrandLogo from '../../components/BrandLogo.jsx'
+import ConfirmDialog from '../../components/ConfirmDialog.jsx'
+import ContextMenu from '../../components/ContextMenu.jsx'
+import Dropdown from '../../components/Dropdown.jsx'
+import FileGrid from '../../components/FileGrid.jsx'
+import FileList from '../../components/FileList.jsx'
+import JobProgressPanel from '../../components/JobProgressPanel.jsx'
+import PreviewDialog from '../../components/PreviewDialog.jsx'
+import PromptDialog from '../../components/PromptDialog.jsx'
+import UploadHint from '../../components/UploadHint.jsx'
+import { downloadUrl, fetchListing, postCommand, uploadFile } from '../../api.js'
+import useDragMove from '../../useDragMove.js'
+import useDragSelect from '../../useDragSelect.js'
+import { basename, copyToClipboard, isDotfile, previewKind, sortNodes, withoutDotfiles } from '../../utils.js'
 
 // The current directory is mirrored into the URL hash so that the browser's
 // back/forward buttons (and their keyboard shortcuts) move between visited
@@ -65,7 +65,7 @@ function writeLocationPath(path, { replace = false } = {}) {
     }
 }
 
-export default function App() {
+export default function FilesApp() {
     const [basedir, setBasedir] = useState('')
     const [cwd, setCwd] = useState('')
     const [hostname, setHostname] = useState(null)          // null until the backend reports it
