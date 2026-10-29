@@ -18,6 +18,9 @@
 
 async function parseJson(response) {
     if (!response.ok) {
+        // A 401 means this browser is not carrying a valid token. There is no
+        // login screen to send the user to: the token is printed by the server,
+        // so the address it printed is the way back in.
         const error = new Error(`${response.status} ${response.statusText}`)
         error.status = response.status
         // a refusal can say why ("these items exist", "not a zip archive"), and
