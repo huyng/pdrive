@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # pdrive - a web based document browser
 # Copyright (C) 2017 Huy Nguyen
 #

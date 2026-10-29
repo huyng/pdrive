@@ -27,12 +27,8 @@ import os.path as pth
 import platform
 import shutil
 
-try:
-    from ..trash import move_to_trash
-except ImportError:  # running this file as a plain script, not a package
-    from trash import move_to_trash
-
 from .nodes import process
+from .trash import move_to_trash
 
 basedir = os.path.abspath(os.curdir)
 hostname = platform.node()
