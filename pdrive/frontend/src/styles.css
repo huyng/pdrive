@@ -1650,7 +1650,12 @@ body.resizing-preview .preview-content {
     overflow: hidden;
     padding: 5px 10px;
     text-overflow: ellipsis;
-    vertical-align: top;
+    /* down the middle of the cell, not along the top of it. A cell here is one
+       line of 12.5px text in a row 34px tall - the height comes from the listing's
+       global table cells, which need it for their 18px icons - so lining the text
+       up along the top leaves the gap at the bottom and reads as a row that has
+       slipped down. */
+    vertical-align: middle;
 }
 
 .preview-csv thead th {
