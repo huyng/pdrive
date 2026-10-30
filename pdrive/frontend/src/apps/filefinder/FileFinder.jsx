@@ -33,7 +33,7 @@ import { track } from '../../jobs.js'
 import useDragMove from '../../useDragMove.js'
 import useDragSelect from '../../useDragSelect.js'
 import { basename, copyToClipboard, isDotfile, sortNodes, withoutDotfiles } from '../../utils.js'
-import { viewerFor } from './viewers/index.js'
+import { viewerFor, viewersFor } from './viewers/index.js'
 
 // The current directory is mirrored into the URL hash so that the browser's
 // back/forward buttons (and their keyboard shortcuts) move between visited
@@ -54,6 +54,35 @@ function storedPreviewMode() {
         // private mode: no preference, so the default one
         return 'modal'
     }
+}
+
+// Which reading a file is opened with, where more than one viewer claims it (a
+// markdown file is also text). A choice about reading and not about the folder,
+// so it is remembered like the frame is - and remembered per family, keyed by the
+// viewer that claims the file first, so that choosing plain text for one markdown
+// file chooses it for every markdown file.
+const VIEWER_KEY = 'pdrive.viewers'
+
+function storedViewerChoices() {
+    try {
+        const parsed = JSON.parse(window.localStorage.getItem(VIEWER_KEY) || '{}')
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            return parsed
+        }
+    } catch (err) {
+        // private mode, or something else wrote over it
+    }
+    return {}
+}
+
+function rememberViewerChoice(id, viewId) {
+    const next = { ...storedViewerChoices(), [id]: viewId }
+    try {
+        window.localStorage.setItem(VIEWER_KEY, JSON.stringify(next))
+    } catch (err) {
+        // nothing to remember it with; the session still works
+    }
+    return next
 }
 
 function pathFromLocation() {
@@ -109,6 +138,7 @@ export default function FileFinder() {
     const [deleteDialog, setDeleteDialog] = useState({ visible: false, paths: [] })
     const [preview, setPreview] = useState({ open: false, node: null })
     const [previewMode, setPreviewMode] = useState(storedPreviewMode)      // modal | sidebar
+    const [viewerChoices, setViewerChoices] = useState(storedViewerChoices)
 
     useEffect(() => {
         try {
@@ -180,6 +210,18 @@ export default function FileFinder() {
     const previewIndex = preview.node
         ? previewableNodes.findIndex((node) => node.path === preview.node.path)
         : -1
+
+    // The reading the preview is in: the choice remembered for this file's
+    // family, or nothing, which leaves the panel with the viewer that claims the
+    // file first. Both frames are handed the same answer, so switching in one is
+    // switching in the other.
+    const previewFamily = preview.node ? viewersFor(preview.node)[0] : null
+    const previewView = previewFamily ? viewerChoices[previewFamily.id] ?? null : null
+    const chooseView = (viewId) => {
+        if (previewFamily) {
+            setViewerChoices(rememberViewerChoice(previewFamily.id, viewId))
+        }
+    }
 
     const selectedPaths = useMemo(() => selectedNodes.map((node) => node.path), [selectedNodes])
 
@@ -1390,6 +1432,8 @@ export default function FileFinder() {
                 <PreviewDialog
                     open={preview.open}
                     node={preview.node}
+                    view={previewView}
+                    onView={chooseView}
                     onClose={closePreview}
                     onDownload={handlePreviewDownload}
                     onPrev={handlePreviewPrev}
@@ -1551,6 +1595,8 @@ export default function FileFinder() {
                     <PreviewSidebar
                         open={preview.open}
                         node={preview.node}
+                        view={previewView}
+                        onView={chooseView}
                         onClose={closePreview}
                         onDownload={handlePreviewDownload}
                         onPrev={handlePreviewPrev}

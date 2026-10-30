@@ -16,7 +16,7 @@ const CLOSE_MS = 140
 // `Modal`, the space bar from the keys below). One of the two frames the panel
 // can be shown in; the other is `PreviewSidebar`, and they differ in nothing but
 // the frame.
-export default function PreviewDialog({ open, node, onClose, onDownload, onPrev, onNext, hasPrev, hasNext }) {
+export default function PreviewDialog({ open, node, view, onView, onClose, onDownload, onPrev, onNext, hasPrev, hasNext }) {
     // The dialog outlives the node it shows by a few frames so that it can
     // animate out: keep the last file (and its position in the listing) around
     // for as long as it is still on screen.
@@ -49,6 +49,8 @@ export default function PreviewDialog({ open, node, onClose, onDownload, onPrev,
         >
             <PreviewPanel
                 node={shown}
+                view={view}
+                onView={onView}
                 onClose={onClose}
                 onDownload={onDownload}
                 onPrev={onPrev}

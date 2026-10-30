@@ -55,7 +55,7 @@ function rememberWidth(width) {
 // move that selection with them. `FileFinder` keeps the two in step, since a
 // pane showing one file and a highlight sitting on another is a pane that
 // argues with its own listing.
-export default function PreviewSidebar({ open, node, onClose, onDownload, onPrev, onNext, hasPrev, hasNext }) {
+export default function PreviewSidebar({ open, node, view, onView, onClose, onDownload, onPrev, onNext, hasPrev, hasNext }) {
     const [width, setWidth] = useState(storedWidth)
     const drag = useRef(null)
 
@@ -171,6 +171,8 @@ export default function PreviewSidebar({ open, node, onClose, onDownload, onPrev
             <div className="preview-slide">
                 <PreviewPanel
                     node={node}
+                    view={view}
+                    onView={onView}
                     barFirst
                     onClose={onClose}
                     onDownload={onDownload}

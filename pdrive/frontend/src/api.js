@@ -44,6 +44,12 @@ export async function fetchTextPreview(path, maxBytes = TEXT_PREVIEW_MAX_BYTES) 
     const response = await fetch(serveUrl(path), {
         headers: { Range: 'bytes=0-' + (maxBytes - 1) },
     })
+    // A file of no bytes answers 416 to a range request. That is the whole of the
+    // answer and not a failure of the read: there is nothing there, and the
+    // preview says so in its own words instead of reporting an error.
+    if (response.status === 416) {
+        return { text: '', binary: false, truncated: false, shownBytes: 0, totalBytes: 0 }
+    }
     if (!response.ok) {
         throw new Error(`${response.status} ${response.statusText}`)
     }

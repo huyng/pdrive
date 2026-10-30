@@ -1090,9 +1090,15 @@ audio.preview-media {
     overflow: hidden;
 }
 
+/* The file's name is what the bar is for. So the name keeps the room it needs to
+   be read, and the size and the date beside it give way when the pane narrows - a
+   name cut away to nothing next to a date in full is a bar that says when the file
+   was written and not what it is. */
 .preview-name {
     color: #fff;
+    flex: 0 1 auto;
     font-weight: 500;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1100,8 +1106,13 @@ audio.preview-media {
 
 .preview-detail {
     color: rgba(255, 255, 255, .45);
-    flex-shrink: 0;
+    /* first to go, and what it keeps it keeps inside itself */
+    flex: 0 100 auto;
     font-size: 12px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .preview-bar-divider {
@@ -1119,6 +1130,10 @@ audio.preview-media {
     color: rgba(255, 255, 255, .75);
     cursor: pointer;
     display: flex;
+    /* the buttons keep their circle and the caption gives up the room: a bar
+       that shrinks its round buttons draws ellipses instead, and a name that is
+       cut short says so with an ellipsis of its own */
+    flex: none;
     height: 32px;
     justify-content: center;
     padding: 0;
@@ -1341,6 +1356,234 @@ body.resizing-preview * {
 
 body.resizing-preview .preview-content {
     pointer-events: none;
+}
+
+/* -------------------------------------------------------------------------
+   A markdown file, drawn as the page it was written to be rather than as the
+   characters it was written with. It sits on the same white page the text
+   preview uses - a document and a file of text are two readings of one thing -
+   and only the padding differs: prose wants a wider margin than columns do.
+   ------------------------------------------------------------------------- */
+
+.preview-text-panel.preview-markdown-panel {
+    padding: 20px 22px;
+}
+
+.preview-markdown {
+    /* prose, so a hair larger than a listing and looser than code, in a colour
+       that is read rather than scanned */
+    color: #2F3E4E;
+    font-size: 13.5px;
+    line-height: 1.7;
+    /* a long address in a paragraph must not widen the page it is in */
+    overflow-wrap: anywhere;
+}
+
+/* Every block breathes the same way, and the first one does not push the page
+   open at its top */
+.preview-markdown > :first-child {
+    margin-top: 0;
+}
+
+.preview-markdown > :last-child {
+    margin-bottom: 0;
+}
+
+.preview-markdown p,
+.preview-markdown ul,
+.preview-markdown ol,
+.preview-markdown blockquote,
+.preview-markdown pre,
+.preview-markdown table,
+.preview-markdown hr {
+    margin: 0 0 14px;
+}
+
+.preview-markdown h1,
+.preview-markdown h2,
+.preview-markdown h3,
+.preview-markdown h4,
+.preview-markdown h5,
+.preview-markdown h6 {
+    color: #1F2D3D;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 24px 0 10px;
+}
+
+/* six sizes that are still a hierarchy in a pane four hundred pixels wide */
+.preview-markdown h1 {
+    font-size: 1.65em;
+}
+
+.preview-markdown h2 {
+    font-size: 1.35em;
+}
+
+.preview-markdown h3 {
+    font-size: 1.15em;
+}
+
+.preview-markdown h4 {
+    font-size: 1.02em;
+}
+
+.preview-markdown h5 {
+    font-size: .95em;
+}
+
+.preview-markdown h6 {
+    color: #5A6B7F;
+    font-size: .9em;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+/* the two headings a document is divided by, and the rule that says so */
+.preview-markdown h1,
+.preview-markdown h2 {
+    border-bottom: 1px solid #E6EBF1;
+    padding-bottom: 6px;
+}
+
+.preview-markdown strong {
+    color: #1F2D3D;
+    font-weight: 600;
+}
+
+.preview-markdown del {
+    color: #8492A6;
+}
+
+/* the app's blue, dark enough to be read as a word and not only seen as a
+   colour */
+.preview-markdown a {
+    color: #0B69C7;
+    text-decoration: none;
+}
+
+.preview-markdown a:hover {
+    text-decoration: underline;
+}
+
+.preview-markdown code {
+    background: #F2F5F9;
+    border-radius: 3px;
+    font-family:
+        ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+        "Liberation Mono", monospace;
+    font-size: .92em;
+    padding: 1px 4px;
+}
+
+.preview-markdown pre {
+    background: #F7F9FB;
+    border: 1px solid #E6EBF1;
+    border-radius: 4px;
+    line-height: 1.6;
+    /* a sample of code keeps its own columns, and scrolls rather than rewrapping
+       into lines the file does not have */
+    overflow: auto;
+    padding: 12px 14px;
+}
+
+.preview-markdown pre code {
+    background: none;
+    font-size: 12.5px;
+    padding: 0;
+    white-space: pre;
+}
+
+.preview-markdown blockquote {
+    border-left: 3px solid #D8E1EA;
+    color: #5A6B7F;
+    padding: 0 0 0 14px;
+}
+
+.preview-markdown ul,
+.preview-markdown ol {
+    padding-left: 22px;
+}
+
+.preview-markdown li {
+    margin: 3px 0;
+}
+
+/* a tight list is a list of lines; a loose one is a list of paragraphs */
+.preview-markdown li > p {
+    margin: 0 0 10px;
+}
+
+.preview-markdown .preview-md-tight > li > p {
+    margin: 0;
+}
+
+.preview-markdown li > ul,
+.preview-markdown li > ol {
+    margin: 3px 0 0;
+}
+
+/* A task item has a box where its bullet would be, and that box belongs in the
+   first line of the item: the marker is taken away so the box is not a second
+   one, and pulled left to stand where the marker stood. */
+.preview-markdown li.preview-md-task-item {
+    list-style: none;
+}
+
+.preview-markdown .preview-md-task {
+    color: #98A6B5;
+    margin: 0 5px 0 -20px;
+}
+
+.preview-markdown .preview-md-task-done {
+    color: #20A0FF;
+}
+
+.preview-markdown .preview-md-task .material-icons {
+    vertical-align: -4px;
+}
+
+/* what the panel could not follow, said in the words the file gave for it */
+.preview-md-plain {
+    color: #5A6B7F;
+    text-decoration: underline dotted rgba(11, 105, 199, .5);
+    text-underline-offset: 2px;
+}
+
+.preview-md-missing {
+    color: #8492A6;
+    font-style: italic;
+}
+
+.preview-markdown img {
+    border-radius: 4px;
+    display: block;
+    height: auto;
+    max-width: 100%;
+}
+
+.preview-markdown table {
+    border-collapse: collapse;
+    display: block;
+    font-size: 12.5px;
+    /* the table is as wide as its columns need and no wider, and one that needs
+       more than the page has scrolls inside the page instead of pushing it
+       sideways */
+    max-width: 100%;
+    overflow: auto;
+    width: max-content;
+}
+
+.preview-markdown th,
+.preview-markdown td {
+    border: 1px solid #E6EBF1;
+    padding: 5px 10px;
+}
+
+.preview-markdown th {
+    background: #F7F9FB;
+    color: #1F2D3D;
+    font-weight: 600;
 }
 
 /* The pane's bar is its header: the file, the arrows, the download and the way
