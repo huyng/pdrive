@@ -263,6 +263,12 @@ class SSH:
             shlex.quote(path), shlex.quote(script))
         done = self.shell(command)
         if done.returncode != 0 and not done.stdout:
+            # one extra round trip, only on the way out: a directory that is
+            # gone and a host that stopped answering both look like a failed
+            # `find` from here, and they are not the same answer
+            if self.run(["test", "-d", path]).returncode != 0:
+                raise FileNotFoundError(
+                    "no such directory on %s: %s" % (self.dest, path))
             raise OSError(done.stderr.strip() or "could not list %s" % path)
         nodes = []
         fields = done.stdout.split("\0")
@@ -289,7 +295,8 @@ class SSH:
         done = self.run(["stat"] + self.stat_args + [path], timeout=20)
         parsed = parse_stat(done.stdout) if done.returncode == 0 else None
         if parsed is None:
-            raise OSError(done.stderr.strip() or "no such file: %s" % path)
+            raise FileNotFoundError(
+                done.stderr.strip() or "no such file: %s" % path)
         node_type, size, modified, created = parsed
         return {"type": node_type, "size": size,
                 "created": created, "modified": modified}

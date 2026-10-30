@@ -33,7 +33,6 @@ falls behind in its own queue and the kernel never awaits a socket.
 import asyncio
 import json
 
-from starlette.websockets import WebSocket
 from starlette.websockets import WebSocketDisconnect
 
 # The topic kinds that exist. A subscription to anything else is refused rather

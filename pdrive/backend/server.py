@@ -48,6 +48,7 @@ import uvicorn
 from starlette.applications import Starlette
 from starlette.datastructures import Headers
 from starlette.middleware import Middleware
+from starlette.requests import ClientDisconnect
 from starlette.requests import Request
 from starlette.requests import cookie_parser
 from starlette.responses import FileResponse
@@ -399,7 +400,12 @@ async def api_listing(request):
         if payload is not None:
             data, status = await asyncio.to_thread(dispatch, json.loads(payload))
             return JSONResponse(data, status)
-    return JSONResponse(await asyncio.to_thread(listing))
+    try:
+        return JSONResponse(await asyncio.to_thread(listing))
+    except (TargetError, OSError, ValueError) as error:
+        # the directory we were started in has gone, or cannot be read: that
+        # is an answer, not a traceback
+        return JSONResponse({"error": str(error)}, refusal(error))
 
 
 async def api_cmd(request):
@@ -411,7 +417,16 @@ async def api_cmd(request):
         return JSONResponse({"error": "bad json"}, 400)
     # off the event loop: a zip or a copy of a large tree would otherwise hold
     # every socket and every other request for as long as it runs
-    data, status = await asyncio.to_thread(dispatch, payload)
+    try:
+        data, status = await asyncio.to_thread(dispatch, payload)
+    except KeyError as error:
+        # a command that arrives without the field it works on is a bad
+        # request: the page always sends whole payloads, a script need not
+        return JSONResponse({"error": "missing %s" % error}, 400)
+    except (TargetError, OSError, ValueError) as error:
+        # a command that touches the filesystem can be refused by it: a
+        # read-only folder, a path that moved, a host that stopped answering
+        return JSONResponse({"error": str(error)}, refusal(error))
     return JSONResponse(data, status)
 
 
@@ -476,6 +491,31 @@ def parse_range(header, size):
     return start, end
 
 
+def refusal(error):
+    """The status to answer a filesystem or a host with, instead of a traceback.
+
+    An unreadable file, a read-only folder, a file that moved between the
+    listing and the click, a host that stopped answering: these are things a
+    file manager hears every day. Each of them has a status, and none of them
+    is a bug on our side, so none of them should leave a traceback in the log.
+    """
+    if isinstance(error, TargetError):
+        return 502
+    if isinstance(error, ValueError):
+        # a path the operating system will not even look at - an embedded NUL,
+        # a name that is not text: the request is what is wrong
+        return 400
+    if isinstance(error, PermissionError):
+        return 403
+    if isinstance(error, (FileNotFoundError, NotADirectoryError, IsADirectoryError)):
+        return 404
+    if isinstance(error, OSError):
+        # what is left of OSError is the other machine: a dropped connection, a
+        # command that is not installed there, a name the shell would not take
+        return 502
+    return 500
+
+
 async def file_response(request, path, attachment=False, sandboxed=False):
     """A file from whichever backend is active, streamed, never read whole.
 
@@ -490,7 +530,7 @@ async def file_response(request, path, attachment=False, sandboxed=False):
     """
     try:
         info = await asyncio.to_thread(fs.info, path)
-    except OSError:
+    except (OSError, ValueError):
         return PlainTextResponse("file not found", 404)
     if info["type"] != "file":
         return PlainTextResponse("not a file", 404)
@@ -532,8 +572,15 @@ async def file_response(request, path, attachment=False, sandboxed=False):
         headers["Content-Disposition"] = (
             'attachment; filename="%s"; filename*=UTF-8\'\'%s'
             % (name.replace('"', ""), quote(name)))
+    try:
+        stream = fs.read(path, start, end - start + 1)
+    except (TargetError, OSError, ValueError) as error:
+        # `info` said the file was there; opening it happened in a second
+        # process, on a second host, and by then it may have been deleted,
+        # locked down, or the host may have gone. Answer, do not crash.
+        return PlainTextResponse("cannot read file", refusal(error))
     return StreamingResponse(
-        fs.read(path, start, end - start + 1),
+        stream,
         status_code=206 if picked is not None else 200,
         headers=headers,
     )
@@ -589,6 +636,11 @@ async def upload_file(request):
 
     try:
         form = await Request(request.scope, counting_receive).form()
+    except ClientDisconnect:
+        # the tab was closed, or the network went away, in the middle of the
+        # body: nobody is left to read an answer, and the panel is told
+        jobs.fail(job, "upload cancelled", 400)
+        return PlainTextResponse("upload cancelled", 400)
     except Exception:
         jobs.fail(job, "could not read the upload", 400)
         raise
@@ -607,8 +659,15 @@ async def upload_file(request):
     # Only the base name is used: the folder is decided by where the file was
     # dropped, and a name like "../x" must not be able to write outside it.
     fpath = pth.join(basedir_arg, name)
-    await asyncio.to_thread(save_upload, upload.file, fpath, upload.size,
-                            lambda progress: jobs.advance(job, 0.9 + 0.1 * progress))
+    try:
+        await asyncio.to_thread(
+            save_upload, upload.file, fpath, upload.size,
+            lambda progress: jobs.advance(job, 0.9 + 0.1 * progress))
+    except (OSError, ValueError) as error:
+        # the body arrived and the write did not: a folder that is not
+        # writable, a disk with no room left. The panel says so.
+        jobs.fail(job, "could not write the file", refusal(error))
+        return JSONResponse({"error": str(error)}, refusal(error))
     node = await asyncio.to_thread(fs.node, fpath)
     jobs.finish(job, {"node": node})
     return JSONResponse({"job": job.id, "node": node})
