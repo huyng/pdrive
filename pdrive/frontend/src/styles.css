@@ -703,6 +703,13 @@ table col.col-modified {
     margin-left: 10px;
 }
 
+/* The icon is a picture, not a space to be shared: it is drawn at 18px and
+   stays 18px while the name beside it is shortened to fit. Only the name gives
+   way. */
+.cell-row .file-icon {
+    flex: none;
+}
+
 table tr.selected {
     /* NSColor.selectedContentBackgroundColor in the light appearance, which is
        the blue the Finder fills a selected row with */
@@ -778,6 +785,13 @@ table td .row-caret {
     margin: 0 2px 0 -2px;
     vertical-align: middle;
     width: 18px;
+    /* the slot belongs to the row, not to the name: it is what puts every icon
+       in the column the same distance from the edge. As a flex item it would
+       otherwise give way - shrinking towards nothing as the name beside it runs
+       out of room - and each row would shrink it by however much its own name
+       overflows, which leaves the icons in a ragged line, further left the
+       longer the name, and further left the narrower the table. */
+    flex: none;
 }
 
 /* the chevron itself, the slot next to a file stays inert */

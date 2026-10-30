@@ -111,7 +111,7 @@ wheels = [
 
 [[package]]
 name = "pdrive"
-version = "0.9.4"
+version = "1.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "python-multipart", version = "0.0.20", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
