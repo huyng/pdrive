@@ -152,7 +152,7 @@ export default function FileGrid({ nodes, dropTargetPath, onRowClick, onRowRight
                         <TilePreview node={node} />
                     </div>
                     {/* the tooltip keeps the full name reachable */}
-                    <div className="filename" title={node.name}>
+                    <div className="filename" data-tip={node.name}>
                         {displayNames.get(node.name) ?? node.name}
                     </div>
                 </div>

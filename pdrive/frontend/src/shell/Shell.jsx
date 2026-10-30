@@ -15,10 +15,18 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import FileFinder from '../apps/filefinder/FileFinder.jsx'
+import TooltipLayer from '../components/Tooltip.jsx'
 
 // The shell is where windows, the dock and the app loader will live. Today it
 // hosts one app and no chrome, so that everything the file browser does still
 // happens exactly as it did when it was the whole page.
 export default function Shell() {
-    return <FileFinder />
+    return (
+        <>
+            <FileFinder />
+            {/* the tooltips of every control in every app: one bubble, drawn in a
+                portal, for anything carrying `data-tip` */}
+            <TooltipLayer />
+        </>
+    )
 }

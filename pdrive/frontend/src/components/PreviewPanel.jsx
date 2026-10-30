@@ -49,7 +49,7 @@ export default function PreviewPanel({ node, onClose, onDownload, onPrev, onNext
             <button
                 type="button"
                 className="preview-action"
-                title="Previous file"
+                data-tip="Previous file"
                 aria-label="Previous file"
                 disabled={!hasPrev}
                 onClick={onPrev}
@@ -67,7 +67,7 @@ export default function PreviewPanel({ node, onClose, onDownload, onPrev, onNext
             <button
                 type="button"
                 className="preview-action"
-                title="Next file"
+                data-tip="Next file"
                 aria-label="Next file"
                 disabled={!hasNext}
                 onClick={onNext}
@@ -78,7 +78,7 @@ export default function PreviewPanel({ node, onClose, onDownload, onPrev, onNext
             <button
                 type="button"
                 className="preview-action"
-                title="Download"
+                data-tip="Download"
                 aria-label="Download"
                 onClick={onDownload}
             >
@@ -87,7 +87,7 @@ export default function PreviewPanel({ node, onClose, onDownload, onPrev, onNext
             <button
                 type="button"
                 className="preview-action"
-                title="Close"
+                data-tip="Close"
                 aria-label="Close"
                 onClick={onClose}
             >

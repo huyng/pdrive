@@ -1228,3 +1228,87 @@ body.resizing-preview .preview-content {
         display: none;
     }
 }
+
+/* -------------------------------------------------------------------------
+   Tooltips
+   Drawn by `TooltipLayer` for any control carrying `data-tip` - see that file
+   for why it is one layer instead of a component around each button. The
+   control keeps its own hover styling; this only ever paints the bubble.
+   ------------------------------------------------------------------------- */
+.tooltip {
+    position: fixed;
+    /* over the dialogs: a dialog's controls carry tips too */
+    z-index: 1100;
+    max-width: 260px;
+    padding: 6px 9px;
+    border-radius: 4px;
+    /* dark enough to read on the white listing and to sit on the blue header,
+       with a hairline so it is still an edge against the dark pane */
+    background: rgba(38, 45, 54, .96);
+    border: 1px solid rgba(255, 255, 255, .14);
+    box-sizing: border-box;
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.35;
+    text-align: center;
+    white-space: normal;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .28);
+    /* the pointer belongs to the control underneath; a bubble that catches it
+       would close itself the moment it opened */
+    pointer-events: none;
+    /* no fade in and no "measure it hidden, then show it": a bubble that is only
+       sometimes painted - while the page is busy, or wherever animations are
+       frozen - is a bubble that sometimes is not there, and a tooltip has no time
+       to spend on being pretty. It arrives where it belongs, opaque. */
+}
+
+.tooltip::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: inherit;
+    border: inherit;
+    /* a square on its corner: two of its four edges become the arrow's "<" */
+    transform: rotate(45deg);
+}
+
+/* the arrow sits on the edge the bubble is on, so it points at the control: an
+   arrow on the top or the left edge keeps the two edges that meet at the
+   top-left corner, and one on the bottom or the right edge keeps the opposite
+   pair */
+.tooltip[data-place='below']::before,
+.tooltip[data-place='right']::before {
+    border-right: 0;
+    border-bottom: 0;
+}
+
+.tooltip[data-place='above']::before,
+.tooltip[data-place='left']::before {
+    border-top: 0;
+    border-left: 0;
+}
+
+.tooltip[data-place='below']::before {
+    top: -5px;
+    left: var(--arrow-x, 50%);
+    margin-left: -4px;
+}
+
+.tooltip[data-place='above']::before {
+    bottom: -5px;
+    left: var(--arrow-x, 50%);
+    margin-left: -4px;
+}
+
+.tooltip[data-place='right']::before {
+    left: -5px;
+    top: var(--arrow-y, 50%);
+    margin-top: -4px;
+}
+
+.tooltip[data-place='left']::before {
+    right: -5px;
+    top: var(--arrow-y, 50%);
+    margin-top: -4px;
+}

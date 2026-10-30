@@ -1409,7 +1409,7 @@ export default function FileFinder() {
                 {/* the host name is centred in the bar itself, not in whatever
                     space the logo and the buttons leave over */}
                 {hostLabel && (
-                    <span className="header-bar-host" title={hostLabel}>{hostLabel}</span>
+                    <span className="header-bar-host" data-tip={hostLabel}>{hostLabel}</span>
                 )}
 
                 <div className="header-bar-actions">
@@ -1417,7 +1417,8 @@ export default function FileFinder() {
                     <div className="header-bar-button-group">
                         <button
                             type="button"
-                            title="Display As Table"
+                            data-tip="Display As Table"
+                            aria-label="Display As Table"
                             aria-pressed={viewMode === 'list'}
                             className={'header-bar-button' + (viewMode === 'list' ? ' active' : '')}
                             onClick={() => setViewMode('list')}
@@ -1426,7 +1427,8 @@ export default function FileFinder() {
                         </button>
                         <button
                             type="button"
-                            title="Display As Grid"
+                            data-tip="Display As Grid"
+                            aria-label="Display As Grid"
                             aria-pressed={viewMode === 'grid'}
                             className={'header-bar-button' + (viewMode === 'grid' ? ' active' : '')}
                             onClick={() => setViewMode('grid')}
@@ -1441,7 +1443,7 @@ export default function FileFinder() {
                     <div className="header-bar-button-group">
                         <button
                             type="button"
-                            title="Preview in a dialog"
+                            data-tip="Preview in a dialog"
                             aria-label="Preview in a dialog"
                             aria-pressed={previewMode === 'modal'}
                             className={'header-bar-button' + (previewMode === 'modal' ? ' active' : '')}
@@ -1451,7 +1453,7 @@ export default function FileFinder() {
                         </button>
                         <button
                             type="button"
-                            title="Preview in the sidebar"
+                            data-tip="Preview in the sidebar"
                             aria-label="Preview in the sidebar"
                             aria-pressed={previewMode === 'sidebar'}
                             className={'header-bar-button' + (previewMode === 'sidebar' ? ' active' : '')}
@@ -1465,7 +1467,7 @@ export default function FileFinder() {
                     <div className="header-bar-button-group">
                         <button
                             type="button"
-                            title={showDotfiles ? 'Hide dotfiles' : 'Show dotfiles'}
+                            data-tip={showDotfiles ? 'Hide dotfiles' : 'Show dotfiles'}
                             aria-label={showDotfiles ? 'Hide dotfiles' : 'Show dotfiles'}
                             aria-pressed={showDotfiles}
                             className={'header-bar-button' + (showDotfiles ? ' active' : '')}

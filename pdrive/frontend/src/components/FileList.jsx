@@ -29,7 +29,7 @@ function RowCaret({ node, expanded, onToggle }) {
         <button
             type="button"
             className={'row-caret' + (expanded ? ' expanded' : '')}
-            title={expanded ? 'Collapse folder' : 'Expand folder'}
+            data-tip={expanded ? 'Collapse folder' : 'Expand folder'}
             aria-label={expanded ? 'Collapse folder' : 'Expand folder'}
             aria-expanded={expanded}
             onClick={(event) => {

@@ -154,7 +154,7 @@ export default function PreviewSidebar({ open, node, onClose, onDownload, onPrev
                 aria-valuemin={MIN_WIDTH}
                 aria-valuemax={maxWidth()}
                 tabIndex={0}
-                title="Drag to resize, double-click for the default width"
+                data-tip="Drag to resize, double-click for the default width"
                 onPointerDown={handleResizeStart}
                 onPointerMove={handleResizeMove}
                 onPointerUp={handleResizeEnd}
