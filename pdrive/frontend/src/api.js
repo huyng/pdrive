@@ -36,6 +36,17 @@ export function downloadUrl(path) {
     return '/download?file=' + encodeURIComponent(path)
 }
 
+// Inline URL for a page: a file the browser is asked to *run*, not to show.
+//
+// The path is the URL's path, not a query string, because a page is a document
+// with neighbours: `logo.png` or `style.css` next to it resolve to
+// `/preview/…/logo.png` and come back to the same route. The response is
+// sandboxed by the server, so the page gets an origin of its own and cannot
+// call this app's API - see `preview_file` in the backend.
+export function previewUrl(path) {
+    return '/preview' + path.split('/').map(encodeURIComponent).join('/')
+}
+
 // Two megabytes: enough that an ordinary source file, note, config or export is
 // shown whole, and small enough that the string, the text node and the layout it
 // costs stay in the range a browser handles without a pause. It is a preview, not

@@ -42,6 +42,7 @@ import sys
 from urllib.parse import parse_qsl
 from urllib.parse import quote
 from urllib.parse import urlencode
+from urllib.parse import urlsplit
 
 import uvicorn
 from starlette.applications import Starlette
@@ -110,6 +111,17 @@ TOKEN_ALPHABET = string.ascii_letters + string.digits
 
 # What a caller that can only make sense of JSON gets told instead of a page.
 JSON_PREFIXES = ("/api", "/serve", "/download", "/upload", "/ws")
+
+# Types a browser runs as a document - a page, or a nested document that can
+# carry script. They are the ones that must never be handed this app's origin:
+# an `.html` file served with it could call `/api/cmd` and delete a directory.
+ACTIVE_TYPES = (
+    "text/html",
+    "application/xhtml+xml",
+    "text/xml",
+    "application/xml",
+    "image/svg+xml",
+)
 
 
 def is_loopback(host):
@@ -296,6 +308,69 @@ class TokenGuard:
         return await response(scope, receive, send)
 
 
+def request_site(scope):
+    """Where a state-changing request came from, as far as the browser says.
+
+    Four answers rather than two, because they mean different things: `same` is
+    this app, `unknown` is a caller that is not a browser at all (curl, a
+    script, an old client that sends no Origin), `opaque` is a browser page
+    with no origin of its own - a sandboxed frame, a `file://` page, a
+    `data:` URL - and anything else is another site.
+    """
+    headers = Headers(scope=scope)
+    if headers.get("sec-fetch-site", "") == "cross-site":
+        return "cross-site"
+    origin = headers.get("origin")
+    if origin is None:
+        return "unknown"
+    if origin == "null":
+        return "opaque"
+    try:
+        host = urlsplit(origin).netloc.lower()
+    except ValueError:
+        return "opaque"
+    if host and host == headers.get("host", "").lower():
+        return "same"
+    return "cross-site"
+
+
+class CrossSiteGuard:
+    """Refuse a change that some other page made the browser send.
+
+    The HTML preview runs a stranger's scripts in a frame, so "which page asked
+    for this POST" stops being a rhetorical question: a sandboxed frame can
+    still fire one (`Origin: null`), and so can any site the user has open in
+    another tab, because a loopback server asks for no token and the browser
+    attaches nothing a cross-site check would need.
+
+    A browser always says where a POST or a socket came from; curl and scripts
+    do not, and those stay allowed - the loopback bind, or the token, is what
+    decides who may talk to this server at all. This closes the one gap they
+    leave: a page that the browser, not the user, chose to send.
+    """
+    SAFE = ("GET", "HEAD", "OPTIONS")
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] not in ("http", "websocket"):
+            return await self.app(scope, receive, send)
+        if scope["type"] == "http" and scope["method"] in self.SAFE:
+            return await self.app(scope, receive, send)
+        if request_site(scope) in ("same", "unknown"):
+            return await self.app(scope, receive, send)
+        if scope["type"] == "websocket":
+            # the same answer a socket without a token gets: a refused handshake
+            await WebSocket(scope, receive, send).close(code=1008)
+            return
+        if wants_json(scope):
+            response = JSONResponse({"error": "cross-site request refused"}, 403)
+        else:
+            response = PlainTextResponse("cross-site request refused", 403)
+        return await response(scope, receive, send)
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -354,6 +429,19 @@ async def download_file(request):
     return await file_response(request, path, attachment=True)
 
 
+async def preview_file(request):
+    """One file of a previewed page, addressed by its path.
+
+    The URL is path-shaped (`/preview/home/me/site/index.html`) rather than a
+    query string so that the page's own relative references - its stylesheet,
+    its images, a script - resolve to its siblings and land back here. What it
+    cannot do is reach the API: the response is sandboxed, and the guard above
+    refuses anything it tries to change.
+    """
+    path = "/" + request.path_params.get("path", "")
+    return await file_response(request, path, sandboxed=True)
+
+
 # A range we cannot answer from this file at all ("bytes=0-…" on an empty one).
 # Kept apart from None, which means the whole file: the text preview relies on
 # the 416 for a file of no bytes and would show an error for a 200 instead.
@@ -388,13 +476,17 @@ def parse_range(header, size):
     return start, end
 
 
-async def file_response(request, path, attachment=False):
+async def file_response(request, path, attachment=False, sandboxed=False):
     """A file from whichever backend is active, streamed, never read whole.
 
     `/serve` and `/download` are the same answer with one header between them,
     and a Range is answered by asking the backend for exactly those bytes - a
     remote `tail -c` - so images, audio, video and the text preview seek the
     same way whether the file is here or on the other machine.
+
+    `sandboxed` is what `/preview` asks for: the page may run its own scripts,
+    but on an origin of its own, so that reading a file cannot become calling
+    this server's API.
     """
     try:
         info = await asyncio.to_thread(fs.info, path)
@@ -410,13 +502,29 @@ async def file_response(request, path, attachment=False):
                         headers={"Content-Range": "bytes */%d" % size})
 
     start, end = (0, size - 1) if picked is None else picked
+    content_type = mimetypes.guess_type(path)[0] or "application/octet-stream"
     headers = {
         "Accept-Ranges": "bytes",
         "Content-Length": str(end - start + 1),
         # the browser decides what to do with an image, a video or a PDF from
         # this header, and `FileResponse` used to guess it for us
-        "Content-Type": mimetypes.guess_type(path)[0] or "application/octet-stream",
+        "Content-Type": content_type,
+        # a `.txt` that happens to hold markup stays text, and a page served
+        # with the wrong type is not adopted as one
+        "X-Content-Type-Options": "nosniff",
     }
+    if sandboxed:
+        # `allow-scripts` without `allow-same-origin`: the page runs, and gets
+        # an opaque origin, so its DOM, its storage, its cookies and this app
+        # are all out of reach - as is `/api`, which would answer a request
+        # from it as a cross-site one
+        headers["Content-Security-Policy"] = (
+            "sandbox allow-scripts; frame-ancestors 'self'")
+    elif content_type in ACTIVE_TYPES:
+        # the same file asked for by `/serve` - a URL copied out of the network
+        # panel, a link in a context menu - is a document, not a page: no
+        # script, so it cannot reach an API that trusts this origin
+        headers["Content-Security-Policy"] = "sandbox"
     if picked is not None:
         headers["Content-Range"] = "bytes %d-%d/%d" % (start, end, size)
     if attachment:
@@ -533,8 +641,13 @@ async def api_jobs(request):
 
 
 async def index_page(request):
-    return FileResponse(pth.join(dist_path, "index.html"),
-                        content_disposition_type="inline")
+    response = FileResponse(pth.join(dist_path, "index.html"),
+                            content_disposition_type="inline")
+    # the app is not for framing: another site must not be able to put a
+    # clickable copy of this UI over its own page
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = "frame-ancestors 'none'"
+    return response
 
 
 routes = [
@@ -543,6 +656,9 @@ routes = [
     Route("/api/jobs", api_jobs, methods=["GET", "POST"]),
     Route("/serve", serve_file),
     Route("/download", download_file),
+    # before the catch-all mount, and path-shaped: a page's relative references
+    # resolve to its siblings and come back here
+    Route("/preview/{path:path}", preview_file),
     Route("/upload", upload_file, methods=["POST"]),
     WebSocketRoute("/ws", ws.serve),
     Route("/", index_page),
@@ -550,7 +666,10 @@ routes = [
     Mount("/", app=StaticFiles(directory=dist_path)),
 ]
 
-app = Starlette(routes=routes, middleware=[Middleware(TokenGuard)])
+app = Starlette(routes=routes, middleware=[
+    Middleware(TokenGuard),
+    Middleware(CrossSiteGuard),
+])
 
 
 # ---------------------------------------------------------------------------

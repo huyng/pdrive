@@ -38,6 +38,7 @@
 
 import AudioViewer from './AudioViewer.jsx'
 import CsvViewer from './CsvViewer.jsx'
+import HtmlViewer from './HtmlViewer.jsx'
 import ImageViewer from './ImageViewer.jsx'
 import MarkdownViewer from './MarkdownViewer.jsx'
 import PdfViewer from './PdfViewer.jsx'
@@ -51,6 +52,7 @@ export const VIEWERS = [
     AudioViewer,
     MarkdownViewer,
     CsvViewer,
+    HtmlViewer,
     TextViewer,
 ]
 

@@ -61,6 +61,17 @@ trash wants `gio` or `trash-put` (permanent Delete still works), and archives
 want the `zip` and `unzip` binaries. Hosts need a POSIX userland - GNU, BSD or
 busybox - which every Linux, macOS and BSD box has.
 
+### Previews
+
+Text, images, PDF, audio, video, CSV and markdown are read by pdrive itself.
+An HTML file is not a picture of a page, it is one, so it runs in a sandboxed
+frame: its own scripts work, on an origin of its own. It cannot read this app's
+storage, its DOM or its API, it cannot submit a form or open a window, and the
+server refuses any state-changing request a sandboxed page - or another site -
+makes the browser send. Files next to the page are served from the same route,
+so a report that loads `style.css` or `logo.png` renders; one that calls
+`fetch()` for data does not, and the bar's other reading shows the source.
+
 ### Getting started
 
 You can run pdrive by calling the `python -m pdrive` command within a directory you want to explore. Once running, you can visit the web interface at `http://127.0.0.1:9999`.

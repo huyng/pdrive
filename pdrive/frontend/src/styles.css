@@ -987,6 +987,13 @@ audio.preview-media {
     width: min(1000px, calc(100vw - 40px));
 }
 
+/* A page is laid out for a window, not for a card, so the dialog gives it the
+   widest stage there is. The pane's own rules further down still win inside a
+   pane, where the frame is the whole width by definition. */
+.preview-content-html .preview-frame {
+    width: min(1200px, calc(100vw - 40px));
+}
+
 /* A page of text: room at the edges of the card, and a margin wide enough that
    the first character is not against the border. */
 .preview-text-panel {
