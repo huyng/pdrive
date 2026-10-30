@@ -987,29 +987,63 @@ audio.preview-media {
     width: min(1000px, calc(100vw - 40px));
 }
 
+/* A page of text: room at the edges of the card, and a margin wide enough that
+   the first character is not against the border. */
 .preview-text-panel {
     background: white;
     border-radius: 6px;
     box-sizing: border-box;
     max-height: calc(100vh - 120px);
     overflow: auto;
-    padding: 16px 18px;
+    padding: 18px 20px;
     width: min(900px, calc(100vw - 40px));
 }
 
 .preview-text {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 12px;
-    line-height: 1.6;
+    /* The platform's own monospace, the way the listing uses the platform's own
+       sans: nothing to download, and a file of text looks like text does in a
+       terminal rather than like a font standing in for one. */
+    color: #2F3E4E;
+    font-family:
+        ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+        "Liberation Mono", monospace;
+    /* the listing's size, and a little more air between the lines than a table
+       gives: five characters a word and forty words a screen are read, not
+       scanned, and monospace at this size needs the light */
+    font-size: 13px;
+    line-height: 1.65;
     margin: 0;
     tab-size: 4;
+    /* a preview is not an editor: no ligature may join two characters into one
+       glyph that the file does not contain */
+    font-variant-ligatures: none;
+    /* the columns of a file are its own; the text is not reflowed to the width
+       of the frame it happens to be in */
     white-space: pre;
 }
 
+/* All of the text, none of the browser's grey: a passage someone selected out
+   of a file is selected in the app's blue like a row of the listing. */
+.preview-text::selection {
+    background: rgba(32, 160, 255, .28);
+}
+
+/* The note above the text is a caption on it and not a line of it: smaller, in
+   its own light box, so a file never appears to begin with a sentence nobody
+   wrote. */
 .preview-note {
-    color: #8A6D3B;
+    background: #FFF5DD;
+    border: 1px solid #E7D2A2;
+    border-radius: 4px;
+    box-sizing: border-box;
+    /* dark enough to be read at this size rather than only to be noticed: the
+       warning brown of a banner is a banner's colour, and this is a caption */
+    color: #765C2C;
+    display: inline-block;
     font-size: 12px;
-    margin: 0 0 12px;
+    line-height: 1.4;
+    margin: 0 0 14px;
+    padding: 3px 9px;
 }
 
 .preview-placeholder {
@@ -1330,6 +1364,17 @@ body.resizing-preview .preview-content {
     height: 100%;
     max-height: 100%;
     width: 100%;
+}
+
+/* The pane is narrow, and a line of a log is not read by dragging it sideways:
+   here the long line wraps. What the file wrote is kept - the indentation, the
+   runs of spaces - because `pre-wrap` keeps the whitespace and only breaks the
+   line, and a word too long for the pane breaks inside itself rather than
+   running out of it. The dialog is wide enough to leave the lines as they are,
+   and there the horizontal scrollbar is the honest thing for code. */
+.preview-sidebar .preview-text {
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
 }
 
 /* pictures and sound keep a little air, and are never rounded */
