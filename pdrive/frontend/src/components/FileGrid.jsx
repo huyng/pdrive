@@ -107,9 +107,22 @@ function fitNames(names) {
 
 function TilePreview({ node }) {
     if (previewKind(node) === 'image') {
+        // A tile shows 64px of a picture that may be twelve megapixels, and the
+        // server sends the whole file: nothing here is a thumbnail yet, so the
+        // cost of a folder of photos is the full size of every photo in it.
+        //
+        // Two attributes are what the page can do about that on its own.
+        // `loading="lazy"` lets the browser leave the tiles that are nowhere
+        // near the viewport unfetched: without it all 200 are requested the
+        // moment the folder opens, six at a time, in whatever order the rows
+        // happen to be in. `decoding="async"` keeps the full-size decode of
+        // each picture off the path that draws the page, so the tiles and the
+        // rest of the UI appear while the photos are still being unpacked.
         return (
             <img
                 draggable={false}
+                loading="lazy"
+                decoding="async"
                 width="64"
                 height="64"
                 style={{ border: '1px solid #eee', objectFit: 'cover' }}
