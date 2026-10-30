@@ -614,6 +614,12 @@ button {
 table {
     width: 100%;
     display: table;
+    /* A fixed layout, so that a column's width is its share of the window and
+       not a function of the longest thing in it: a file called
+       `2024-annual-report-final-final.pdf` may widen the name column and squeeze
+       the rest, but it may not wrap and it may not push the table wider than the
+       window. What does not fit is cut in the middle, by `CellText`. */
+    table-layout: fixed;
     /* Not `collapse`: a collapsed table drops a cell's own bottom rule the
        moment the cell sticks, because the collapsed border belongs to the
        table. Separate borders with no spacing draw the same lines. */
@@ -625,6 +631,76 @@ table {
 
 table thead {
     background: #EFF2F7;
+}
+
+/* The columns that have a predictable shape get a share of the width instead of
+   whatever their longest value wants: a kind is a word or two, a size is a
+   number and a unit, a timestamp is nineteen characters. Nineteen characters is
+   what decides these numbers - 19% each holds a full `2026-10-29 16:55:54` in a
+   window of ordinary size, and cuts it in the middle rather than wrapping when
+   the window is small or the pane is open. The name takes the 39% that is left. */
+table col.col-kind {
+    width: 11%;
+}
+
+table col.col-size {
+    width: 12%;
+}
+
+table col.col-created,
+table col.col-modified {
+    width: 19%;
+}
+
+/* A cell's line of text, in the two halves `CellText` splits it into. The whole
+   line is laid out on one line and clipped, and each half carries the browser's
+   own ellipsis: the first half shrinks and is ellipsised - that is the middle cut
+   - while the last characters stay pinned to the right of the cell, unless the
+   cell is too narrow even for those, in which case they are ellipsised too. */
+.cell-text {
+    display: flex;
+    white-space: nowrap;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.cell-text-head {
+    /* no growing: the two halves sit next to each other, and the gap between
+       them is only ever the ellipsis that replaced what did not fit. A head that
+       grew would push the tail to the far edge of the column, which reads as a
+       space in the middle of the name. */
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cell-text-tail {
+    /* the end does not give way to the beginning: it only gives way to the edge
+       of the cell, and then it is ellipsised rather than clipped */
+    flex: 0 0 auto;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* This half starts with the space the beginning gave up, and a space at the
+       start of a line box is collapsed away - it is never drawn - so `…19:23:06`
+       would be the two halves run together. `pre` keeps the space the text has,
+       and it is the text's own space, not a placeholder put there for layout. */
+    white-space: pre;
+}
+
+/* The name's cell is a row of its own: chevron, icon, then the name, which takes
+   the room they leave. */
+.cell-row {
+    display: flex;
+    align-items: center;
+}
+
+.cell-row .cell-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-left: 10px;
 }
 
 table tr.selected {
@@ -656,6 +732,11 @@ table td {
        more than its content; the listing stays compact as a Finder or Explorer
        window, which is what makes a long directory readable */
     height: 32px;
+    box-sizing: border-box;
+    /* one line, always: a row that wraps is two rows, and every row under it
+       moves. The text is shortened to fit instead. */
+    white-space: nowrap;
+    overflow: hidden;
     padding-left: 18px;
     padding-right: 18px;
     cursor: default;
@@ -666,6 +747,7 @@ table td {
 }
 
 table th {
+    box-sizing: border-box;
     border-bottom: 1px solid #e0e6ed;
     white-space: nowrap;
     overflow: hidden;

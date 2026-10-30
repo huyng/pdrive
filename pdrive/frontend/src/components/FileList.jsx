@@ -2,7 +2,8 @@
 // Copyright (C) 2017 Huy Nguyen
 // Licensed under the GNU General Public License v3 or later. See LICENSE.
 
-import { formatKind, formatSize, truncate } from '../utils.js'
+import { formatKind, formatSize } from '../utils.js'
+import CellText from './CellText.jsx'
 import FileIcon from './FileIcon.jsx'
 
 // How far the contents of an expanded folder are indented, in pixels.
@@ -66,6 +67,19 @@ export default function FileList({
 }) {
     return (
         <table cellSpacing="0" cellPadding="0" border="0">
+            {/* Every column but the first has a share of the width, so that a long
+                value in one of them cannot squeeze the others, and the name takes
+                whatever is left. A cell too narrow for its text shortens it in the
+                middle (`CellText`) rather than letting it wrap onto a second line,
+                which in a list of files turns one row into two and moves every row
+                under it. */}
+            <colgroup>
+                <col />
+                <col className="col-kind" />
+                <col className="col-size" />
+                <col className="col-created" />
+                <col className="col-modified" />
+            </colgroup>
             <thead>
                 <tr>
                     <th onClick={() => onToggleSort('name')}>
@@ -120,20 +134,20 @@ export default function FileList({
                             onDoubleClick={(event) => onRowDoubleClick(node, event)}
                         >
                             <td style={depth > 0 ? { paddingLeft: 18 + depth * INDENT } : undefined}>
-                                <RowCaret
-                                    node={node}
-                                    expanded={expanded}
-                                    onToggle={onToggleExpand}
-                                />
-                                <RowIcon node={node} />
-                                <span data-drag-handle style={{ marginLeft: '10px' }}>
-                                    {truncate(node.name, 40)}
-                                </span>
+                                <div className="cell-row">
+                                    <RowCaret
+                                        node={node}
+                                        expanded={expanded}
+                                        onToggle={onToggleExpand}
+                                    />
+                                    <RowIcon node={node} />
+                                    <CellText text={node.name} dragHandle />
+                                </div>
                             </td>
-                            <td>{formatKind(node)}</td>
-                            <td>{formatSize(node)}</td>
-                            <td>{node.ctime}</td>
-                            <td>{node.mtime}</td>
+                            <td><CellText text={formatKind(node)} /></td>
+                            <td><CellText text={formatSize(node)} /></td>
+                            <td><CellText text={node.ctime} /></td>
+                            <td><CellText text={node.mtime} /></td>
                         </tr>
                     )
                 })}
