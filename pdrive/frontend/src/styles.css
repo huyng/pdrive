@@ -1295,6 +1295,21 @@ table tbody tr.drop-target td {
     }
 }
 
+/* The pane leaves by the same edge it arrived from: the seam slides back out
+   over the same fifth of a second, and the listing takes the room back as it
+   goes. `forwards` holds it shut for the few frames it stays mounted. */
+.preview-sidebar.is-closing {
+    animation: preview-pane-close 200ms ease-in forwards;
+    /* it is on its way out: it should not answer a pointer or a drag */
+    pointer-events: none;
+}
+
+@keyframes preview-pane-close {
+    to {
+        width: 0;
+    }
+}
+
 /* The panel is laid out at the width it is headed for, and the box around it is
    allowed to be narrower than that while the pane opens: the panel's own left
    edge is the moving edge, so the picture of it slides in with the seam instead
@@ -1843,6 +1858,11 @@ body.resizing-preview .preview-content {
     .preview-slide {
         width: 100%;
     }
+
+    /* an overlay leaves the way it came: whole, off the window's edge */
+    .preview-sidebar.is-closing {
+        animation-name: preview-pane-slide-out;
+    }
 }
 
 @keyframes preview-pane-slide-in {
@@ -1851,11 +1871,23 @@ body.resizing-preview .preview-content {
     }
 }
 
-/* The opening is an ornament: for anyone whose system asks for less motion, the
-   pane is simply already open. */
+@keyframes preview-pane-slide-out {
+    to {
+        transform: translateX(100%);
+    }
+}
+
+/* The opening and the closing are an ornament: for anyone whose system asks for
+   less motion, the pane is simply already open, or already gone. */
 @media (prefers-reduced-motion: reduce) {
-    .preview-sidebar {
+    .preview-sidebar,
+    .preview-sidebar.is-closing {
         animation: none;
+    }
+
+    /* no slide to watch: get out of the way at once */
+    .preview-sidebar.is-closing {
+        display: none;
     }
 }
 

@@ -2,7 +2,7 @@
 // Copyright (C) 2017 Huy Nguyen
 // Licensed under the GNU General Public License v3 or later. See LICENSE.
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import PreviewPanel from '../../components/PreviewPanel.jsx'
 import usePreviewKeys from '../../components/usePreviewKeys.js'
@@ -16,6 +16,10 @@ const MIN_WIDTH = 260
 const MAX_WIDTH = 720
 const LISTING_MIN_WIDTH = 360
 const KEYBOARD_STEP = 16
+
+// how long the pane stays in the DOM while it slides out, in milliseconds;
+// must match the duration of the exit animation in the stylesheet
+const CLOSE_MS = 200
 
 function maxWidth() {
     return Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, window.innerWidth - LISTING_MIN_WIDTH))
@@ -59,8 +63,36 @@ export default function PreviewSidebar({ open, node, view, onView, onClose, onDo
     const [width, setWidth] = useState(storedWidth)
     const drag = useRef(null)
 
+    const active = open && Boolean(node)
+
+    // The pane outlives the node it shows by a few frames so that it can slide
+    // out: keep the last file (and its position in the listing) around for as
+    // long as it is still on screen.
+    const lastShown = useRef({ node, hasPrev, hasNext })
+    if (node) {
+        lastShown.current = { node, hasPrev, hasNext }
+    }
+    const shown = node ?? lastShown.current.node
+    const nav = node ? { hasPrev, hasNext } : lastShown.current
+
+    // still in the DOM after closing, on its way out through the window's edge
+    const [mounted, setMounted] = useState(active)
+    const closing = mounted && !active
+
+    useEffect(() => {
+        if (active) {
+            setMounted(true)
+            return undefined
+        }
+        if (!mounted) {
+            return undefined
+        }
+        const timer = setTimeout(() => setMounted(false), CLOSE_MS)
+        return () => clearTimeout(timer)
+    }, [active, mounted])
+
     usePreviewKeys({
-        enabled: open && Boolean(node),
+        enabled: active,
         // the arrows belong to the listing next door; this pane shows whatever
         // they land on, and its own chevrons answer the pointer
         arrowKeys: false,
@@ -68,8 +100,8 @@ export default function PreviewSidebar({ open, node, view, onView, onClose, onDo
         onClose,
         onPrev,
         onNext,
-        hasPrev,
-        hasNext,
+        hasPrev: nav.hasPrev,
+        hasNext: nav.hasNext,
     })
 
     const resize = (next) => {
@@ -135,13 +167,16 @@ export default function PreviewSidebar({ open, node, view, onView, onClose, onDo
         resize(width + step)
     }
 
-    if (!open || !node) {
+    if (!active && !closing) {
+        return null
+    }
+    if (!shown) {
         return null
     }
 
     return (
         <aside
-            className="preview-sidebar"
+            className={'preview-sidebar' + (closing ? ' is-closing' : '')}
             style={{ '--preview-width': `${width}px` }}
             aria-label="Preview"
         >
@@ -170,7 +205,7 @@ export default function PreviewSidebar({ open, node, view, onView, onClose, onDo
                 sliding in is cut by the window's edge, not by its own frame. */}
             <div className="preview-slide">
                 <PreviewPanel
-                    node={node}
+                    node={shown}
                     view={view}
                     onView={onView}
                     barFirst
@@ -178,8 +213,8 @@ export default function PreviewSidebar({ open, node, view, onView, onClose, onDo
                     onDownload={onDownload}
                     onPrev={onPrev}
                     onNext={onNext}
-                    hasPrev={hasPrev}
-                    hasNext={hasNext}
+                    hasPrev={nav.hasPrev}
+                    hasNext={nav.hasNext}
                 />
             </div>
         </aside>
