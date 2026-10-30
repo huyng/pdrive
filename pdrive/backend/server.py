@@ -33,12 +33,14 @@ import asyncio
 import hmac
 import ipaddress
 import json
-import os
+import mimetypes
 import os.path as pth
 import platform
 import secrets
 import string
+import sys
 from urllib.parse import parse_qsl
+from urllib.parse import quote
 from urllib.parse import urlencode
 
 import uvicorn
@@ -52,6 +54,8 @@ from starlette.responses import HTMLResponse
 from starlette.responses import JSONResponse
 from starlette.responses import PlainTextResponse
 from starlette.responses import RedirectResponse
+from starlette.responses import Response
+from starlette.responses import StreamingResponse
 from starlette.routing import Mount
 from starlette.routing import Route
 from starlette.routing import WebSocketRoute
@@ -60,19 +64,14 @@ from starlette.websockets import WebSocket
 
 from .kernel import archive
 from .kernel import fs
+from .kernel.backends import TargetError
 from .kernel import jobs
 from .kernel import ws
 from .kernel.commands import dispatch
-from .kernel.nodes import process
 
 frontend_path = pth.join(
     pth.split(pth.split(pth.abspath(__file__))[0])[0], "frontend")
 dist_path = pth.join(frontend_path, "dist")
-
-# the directory this server was started in, and the machine it runs on: kernel
-# state, not a property of a request
-basedir = fs.basedir
-hostname = fs.hostname
 
 
 def package_version():
@@ -306,7 +305,7 @@ class TokenGuard:
 
 def listing():
     """The `/api` answer: where we are, what is here, what this build is."""
-    data = fs.list_dir(basedir)
+    data = fs.list_dir(fs.basedir)
     data["version"] = VERSION
     # filled in once apps exist; the field is here now so that the UI reads one
     # shape from the first phase on
@@ -342,34 +341,114 @@ async def api_cmd(request):
 
 
 async def serve_file(request):
-    fpath = request.query_params.get("file")
-    if not fpath or not os.path.isfile(fpath):
+    path = request.query_params.get("file")
+    if not path:
         return PlainTextResponse("file not found", 404)
-    return FileResponse(fpath, content_disposition_type="inline")
+    return await file_response(request, path)
 
 
 async def download_file(request):
-    fpath = request.query_params.get("file")
-    if not fpath or not os.path.isfile(fpath):
+    path = request.query_params.get("file")
+    if not path:
         return PlainTextResponse("file not found", 404)
-    return FileResponse(fpath, filename=pth.basename(fpath),
-                        content_disposition_type="attachment")
+    return await file_response(request, path, attachment=True)
+
+
+# A range we cannot answer from this file at all ("bytes=0-…" on an empty one).
+# Kept apart from None, which means the whole file: the text preview relies on
+# the 416 for a file of no bytes and would show an error for a 200 instead.
+UNSATISFIABLE = object()
+
+
+def parse_range(header, size):
+    """`(start, end)` for a single byte range, None for the whole file."""
+    if not header or not header.lower().startswith("bytes="):
+        return None
+    spec = header[len("bytes="):].strip()
+    if "," in spec:
+        # several ranges at once: a browser asking for them can read the whole
+        # file just as well, and no reader in this UI asks for one
+        return None
+    first, _, last = spec.partition("-")
+    try:
+        if first == "":
+            # a suffix range, the last N bytes
+            suffix = int(last)
+            if suffix <= 0:
+                return None
+            return max(size - suffix, 0), size - 1
+        start = int(first)
+        end = size - 1 if last == "" else min(int(last), size - 1)
+    except ValueError:
+        return None
+    if start >= size:
+        return UNSATISFIABLE
+    if end < start:
+        return None
+    return start, end
+
+
+async def file_response(request, path, attachment=False):
+    """A file from whichever backend is active, streamed, never read whole.
+
+    `/serve` and `/download` are the same answer with one header between them,
+    and a Range is answered by asking the backend for exactly those bytes - a
+    remote `tail -c` - so images, audio, video and the text preview seek the
+    same way whether the file is here or on the other machine.
+    """
+    try:
+        info = await asyncio.to_thread(fs.info, path)
+    except OSError:
+        return PlainTextResponse("file not found", 404)
+    if info["type"] != "file":
+        return PlainTextResponse("not a file", 404)
+
+    size = info["size"]
+    picked = parse_range(request.headers.get("range", ""), size)
+    if picked is UNSATISFIABLE:
+        return Response(status_code=416,
+                        headers={"Content-Range": "bytes */%d" % size})
+
+    start, end = (0, size - 1) if picked is None else picked
+    headers = {
+        "Accept-Ranges": "bytes",
+        "Content-Length": str(end - start + 1),
+        # the browser decides what to do with an image, a video or a PDF from
+        # this header, and `FileResponse` used to guess it for us
+        "Content-Type": mimetypes.guess_type(path)[0] or "application/octet-stream",
+    }
+    if picked is not None:
+        headers["Content-Range"] = "bytes %d-%d/%d" % (start, end, size)
+    if attachment:
+        name = pth.basename(path)
+        headers["Content-Disposition"] = (
+            'attachment; filename="%s"; filename*=UTF-8\'\'%s'
+            % (name.replace('"', ""), quote(name)))
+    return StreamingResponse(
+        fs.read(path, start, end - start + 1),
+        status_code=206 if picked is not None else 200,
+        headers=headers,
+    )
 
 
 def save_upload(source, destination, size, report):
     # chunked, because the file may be larger than the memory this process is
-    # allowed to use: the browser streams it in and it goes out to disk in the
-    # same shape, never whole
+    # allowed to use: the browser streams it in and it goes out to the backend
+    # in the same shape, never whole. Over ssh the sink is the stdin of a
+    # remote `cat`, so nothing is held on this side either.
     written = 0
-    with open(destination, "wb") as out:
+    sink = fs.write(destination)
+    try:
         while True:
             chunk = source.read(1024 * 1024)
             if not chunk:
                 break
-            out.write(chunk)
+            sink.write(chunk)
             written += len(chunk)
             if size:
                 report(written / float(size))
+    finally:
+        sink.close()
     return written
 
 
@@ -407,7 +486,8 @@ async def upload_file(request):
         raise
     upload = form.get("file")
     basedir_arg = form.get("basedir")
-    if not isinstance(basedir_arg, str) or not os.path.isdir(basedir_arg):
+    if not isinstance(basedir_arg, str) or not await asyncio.to_thread(
+            fs.isdir, basedir_arg):
         # the folder was removed or renamed between the listing and the drop
         jobs.fail(job, "no such directory", 400)
         return JSONResponse({"error": "no such directory"}, 400)
@@ -418,10 +498,10 @@ async def upload_file(request):
     jobs.relabel(job, "Uploading %s" % name)
     # Only the base name is used: the folder is decided by where the file was
     # dropped, and a name like "../x" must not be able to write outside it.
-    fpath = os.path.join(basedir_arg, name)
+    fpath = pth.join(basedir_arg, name)
     await asyncio.to_thread(save_upload, upload.file, fpath, upload.size,
                             lambda progress: jobs.advance(job, 0.9 + 0.1 * progress))
-    node = await asyncio.to_thread(process, fpath)
+    node = await asyncio.to_thread(fs.node, fpath)
     jobs.finish(job, {"node": node})
     return JSONResponse({"job": job.id, "node": node})
 
@@ -487,6 +567,9 @@ def print_banner(args):
     print("\x1b[32m================\x1b[0m")
     print("")
     print(f"\x1b[32mStarting server at http://{args.host}:{args.port}\x1b[0m")
+    # what is being served, and on which machine: the same line for a local
+    # directory and for one on the other side of an ssh connection
+    print(f"\x1b[32mServing {fs.describe()} ({fs.hostname})\x1b[0m")
     print("")
     if TOKEN is not None:
         # 0.0.0.0 and :: are bind addresses, not addresses a browser can open
@@ -526,14 +609,32 @@ def assert_single_process(workers):
 
 
 def main():
+    # `pdrive serve` and `pdrive` are the same command; the word is accepted
+    # because it reads better in a shell history next to `pdrive serve ssh://…`
+    argv = sys.argv[1:]
+    if argv and argv[0] == "serve":
+        argv = argv[1:]
+
     p = argparse.ArgumentParser()
+    p.add_argument("target", nargs="?", default=".",
+                   help="Directory to serve (default: the current one), or "
+                        "ssh://[user@]host[:port][/path] for a directory on "
+                        "another machine, reached over ssh")
     p.add_argument("-H", "--host", default="127.0.0.1",
                    help="Host address to bind server to (default: 127.0.0.1). "
                         "Binding to anything but loopback generates a token "
                         "and prints the address that carries it")
     p.add_argument("-p", "--port", default=9999,
                    help="Host port to bind server to (default: 9999)")
-    a = p.parse_args()
+    a = p.parse_args(argv)
+
+    # before the banner and before a single request is answered: a target that
+    # cannot be opened is a sentence in the terminal, not a broken page
+    try:
+        fs.set_target(a.target)
+    except (TargetError, OSError) as error:
+        raise SystemExit("pdrive: %s" % error)
+
     configure_auth(a)
     print_banner(a)
     workers = 1

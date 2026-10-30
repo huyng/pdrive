@@ -22,7 +22,6 @@ given can find those paths in the reply. `ls` and `mkdir` answer with what they
 produced instead.
 """
 
-from . import archive
 from . import fs
 
 
@@ -50,9 +49,9 @@ def dispatch(payload, progress=None):
     if command == "mkdir":
         return fs.make_dir(payload["path"]), 200
     if command == "zip":
-        return archive.zip_paths(payload, progress)
+        return fs.zip_paths(payload, progress)
     if command == "unzip":
-        return archive.unzip_archive(payload, progress)
+        return fs.unzip_archive(payload, progress)
 
     # an unknown command is echoed back untouched, which is what the frontend
     # has always got and what tells it the kernel did not understand it

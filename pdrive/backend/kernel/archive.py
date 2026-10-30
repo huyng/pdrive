@@ -169,6 +169,25 @@ def zip_paths(payload, progress=None):
     return data, 200
 
 
+def unzip_destination(archive, members, free_path):
+    """Where an archive's members go: like the Finder, several items are unpacked
+    into a folder named after the archive, a single one next to it.
+
+    ``free_path`` resolves a name that is taken - `unique_path` on this machine,
+    a remote `test -e` over ssh - so that both backends unpack into the same
+    place and the UI never has to know which one answered.
+    """
+    base = pth.dirname(archive)
+    tops = set()
+    for member in members:
+        entry = member.replace("\\", "/").strip("/").split("/")[0]
+        if entry:
+            tops.add(entry)
+    if len(tops) > 1:
+        return free_path(pth.join(base, pth.splitext(pth.basename(archive))[0]))
+    return base
+
+
 def unzip_archive(payload, progress=None):
     """Unpack next to the archive, refusing to write outside that folder."""
     archive = payload["path"]
@@ -180,18 +199,7 @@ def unzip_archive(payload, progress=None):
         return {"error": "not a zip archive"}, 400
     with zf:
         members = [name for name in zf.namelist() if name.strip("/\\")]
-        base = pth.dirname(archive)
-        # like the Finder: several items are unpacked into a folder
-        # named after the archive, a single one next to it
-        tops = set()
-        for member in members:
-            entry = member.replace("\\", "/").strip("/").split("/")[0]
-            if entry:
-                tops.add(entry)
-        destination = base
-        if len(tops) > 1:
-            destination = unique_path(pth.join(
-                base, pth.splitext(pth.basename(archive))[0]))
+        destination = unzip_destination(archive, members, unique_path)
         plans = []
         skipped = []
         for member in members:

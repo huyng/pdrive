@@ -14,44 +14,53 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""The shape the UI sees a file or directory as."""
+"""The shape the UI sees a file or directory as.
 
+One builder, `node()`, so that a listing taken from `os.stat` and a listing
+taken from a remote `stat` cannot drift apart: a backend hands over the values
+it has and gets back the dict the frontend has always read.
+"""
+
+import datetime
+import mimetypes
+import os
 import os.path as pth
+import stat
 
 
-def process(path):
-    import os
-    import stat
-    import datetime
-    import mimetypes
+def stamp(seconds):
+    """The timestamp format of a node: local time, and sortable as a string."""
+    return datetime.datetime.fromtimestamp(seconds).strftime("%Y-%m-%d %H:%M:%S")
 
-    def timestamp(seconds):
-        # local time, and a format that also sorts correctly as a string
-        return datetime.datetime.fromtimestamp(seconds).strftime("%Y-%m-%d %H:%M:%S")
 
-    name = pth.split(path)[1]
-    statinfo = os.stat(path)
+def node(path, created, modified, node_type=None, size=0):
+    """One entry of a listing.
 
-    if stat.S_ISDIR(statinfo.st_mode):
-        node_type = "dir"
-    else:
+    ``created`` falls back to the inode change time on platforms that keep no
+    birth time, which is the closest thing they have; the caller passes the
+    birth time when it has one.
+    """
+    if node_type is None:
         node_type = "file"
-
     mimetype = None
     if node_type == "file":
-        mimetype, _ = mimetypes.guess_type(path)
-
-    # st_birthtime is the real creation time (macOS, Windows, some BSDs).
-    # Platforms without it (Linux) fall back to st_ctime, the last inode
-    # change, which is the closest thing they have.
-    created = getattr(statinfo, "st_birthtime", None) or statinfo.st_ctime
-
+        mimetype = mimetypes.guess_type(path)[0]
     return {
-        "name": name,
+        "name": pth.basename(path.rstrip("/")) or path,
         "path": path,
         "type": node_type,
         "mimetype": mimetype,
-        "size": statinfo.st_size,
-        "ctime": timestamp(created),
-        "mtime": timestamp(statinfo.st_mtime)
+        "size": size,
+        "ctime": stamp(created),
+        "mtime": stamp(modified)
     }
+
+
+def process(path):
+    """`os.stat` on this machine, as a node."""
+    statinfo = os.stat(path)
+    is_dir = stat.S_ISDIR(statinfo.st_mode)
+    # st_birthtime is the real creation time (macOS, Windows, some BSDs).
+    created = getattr(statinfo, "st_birthtime", None) or statinfo.st_ctime
+    return node(path, created, statinfo.st_mtime,
+                "dir" if is_dir else "file", statinfo.st_size)

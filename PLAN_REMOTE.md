@@ -157,10 +157,16 @@ pdrive serve                    same
 pdrive serve /srv               serve a local directory
 pdrive serve ssh://foo@bar.com          foo's home on bar.com
 pdrive serve ssh://foo@bar.com/var/log  /var/log on bar.com
+pdrive serve ssh://foo@bar.com/~/notes  ~/notes on bar.com
 pdrive serve ssh://foo@bar.com:2222/srv a non-default ssh port
 ```
 
-`served` prefix `serve` is stripped from argv, so `pdrive ssh://…` works as
+A path in an address is absolute, because a URL path always starts at `/`;
+`~/` is the one exception a user will type, and the remote shell expands it.
+The directory is checked (`test -d`) before anything else is asked of it, so a
+typo is one sentence at start-up and not an empty page.
+
+The word `serve` is stripped from argv, so `pdrive ssh://…` works as
 sugar (a local path cannot contain `://`). `-H`/`-p` are unchanged, and the
 banner gains the target: `Serving ssh://foo@bar.com/var/log — bar.com`.
 
@@ -250,4 +256,16 @@ spaces, quotes, `#`, `?`, `%`, a newline and non-ASCII, Range on a 20 MB file,
 a 20 MB upload whose md5 matches on arrival, `mkdir`/`mv`/`cp`/`rm`/`trash`,
 zip and unzip through the job panel including the 409 "these exist" answer, and
 `PDRIVE_SSH` pointed at a host that is not there.
+
+Then against a real remote: a Raspberry Pi 5 (`pecan.local`, Debian, aarch64,
+GNU coreutils, `gio`, `zip`/`unzip`), over the LAN and the default `ssh`. Home
+directory listing, `~/` targets, a 3 MB upload whose md5 matches on the Pi and
+downloaded back, `mkdir`/`cp`/`mv`, `gio trash` leaving a proper
+`~/.local/share/Trash/{files,info}` pair, zip and unzip as jobs, text preview
+by Range, `image/png` served with the right content type, and the UI listing the
+remote files in a headless browser. `stat` is the only part of that which was
+not exercised: the Pi speaks GNU, so the BSD branch was only covered by the
+macOS wrapper. Measured there: ~30 ms per command on an established
+`ControlMaster` connection, ~125 ms for a listing of a 28-entry home directory
+over Wi-Fi; the server's RSS stayed at 43 MB across a 20 MB transfer.
 
