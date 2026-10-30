@@ -86,7 +86,9 @@ button {
     white-space: nowrap;
 }
 
-/* Header bar */
+/* Header bar. It sits at the top of the listing's column, so it is as wide as
+   the listing is: a pane sharing the window keeps its own top edge, and there is
+   no blue strip over it. */
 
 .header-bar {
     background: #20A0FF;
@@ -1177,9 +1179,11 @@ table tbody tr.drop-target td {
    what is being shown.
    ------------------------------------------------------------------------- */
 
-/* the listing and the pane share one row, and the row is the rest of the
-   window: the pane is as tall as it, and the listing scrolls inside its own
-   column rather than dragging the page along */
+/* the listing and the pane share one row, and that row is the whole window:
+   the blue bar is the top of the listing's own column rather than a strip
+   across the window, so the pane beside it starts at the very top edge and is
+   as tall as the window is, not as tall as what is left under a header. The
+   listing scrolls inside its own column rather than dragging the page along */
 .main-view {
     align-items: stretch;
     display: flex;
@@ -1205,9 +1209,11 @@ table tbody tr.drop-target td {
     flex: 0 0 auto;
     flex-direction: column;
     /* the row stretches it to the window, so it needs no height of its own and
-       no `position: sticky` - nothing scrolls behind it any more. It does still
-       have to be positioned: the resize strip is absolute, and without this it
-       would anchor to the window's edge instead of the pane's */
+       no `position: sticky` - nothing scrolls behind it any more, and there is
+       nothing above it either: the window's header belongs to the column on the
+       left, which is what lets the pane own the whole right-hand edge. It does
+       still have to be positioned: the resize strip is absolute, and without
+       this it would anchor to the window's edge instead of the pane's */
     position: relative;
     /* dragged by the user, in pixels, with the grab strip setting it; the
        fallback is the width a pane opens at when nothing has been chosen */
@@ -1216,6 +1222,39 @@ table tbody tr.drop-target td {
        wide and the window was made narrower: the drag clamps too, but only at
        the moment of the drag */
     max-width: calc(100vw - 360px);
+    /* The pane arrives by opening out of the window's edge over a fifth of a
+       second, and the listing gives way over the same fifth: it costs a relayout
+       a frame, which is the price of both columns moving together - the
+       alternative, the pane appearing at its full width in one frame, moves the
+       listing in a jump that reads as a mistake. It plays when the pane opens,
+       which is when it mounts; the width is the ending width, so nothing is
+       fixed here that a drag has to fight. */
+    animation: preview-pane-open 200ms cubic-bezier(.22, .61, .36, 1);
+}
+
+@keyframes preview-pane-open {
+    from {
+        width: 0;
+    }
+}
+
+/* The panel is laid out at the width it is headed for, and the box around it is
+   allowed to be narrower than that while the pane opens: the panel's own left
+   edge is the moving edge, so the picture of it slides in with the seam instead
+   of being uncovered by it. Laid out once also means a document in it is
+   paginated once, at the size it will be read at, and not twice a frame. */
+.preview-slide {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    /* the panel keeps the width it is arriving at while the box around it opens,
+       so its text, its pictures and a paged document are laid out once, at the
+       size they are read at, instead of being reflowed twice a frame. The width
+       is on this box and not on the bar and the stage themselves: they are
+       stretched to it, which is how they were sized before there was a slide,
+       and a bar that carries its own padding keeps it */
+    width: var(--preview-width);
 }
 
 /* The grab strip is a hit area, not a handle you can see: nine pixels wide and
@@ -1317,11 +1356,35 @@ body.resizing-preview .preview-content {
            listing alone behind it, so there is nothing to drag */
         max-width: none;
         width: min(88vw, 460px);
+        /* an overlay is not sharing the width with anything, so it slides whole
+           instead of opening: nothing behind it has to move */
+        animation-name: preview-pane-slide-in;
+        transform: translateX(0);
         z-index: 30;
     }
 
     .preview-resize {
         display: none;
+    }
+
+    /* the pane is as wide as the window allows it here, so the panel filling it
+       is the same as the panel at the width it was dragged to */
+    .preview-slide {
+        width: 100%;
+    }
+}
+
+@keyframes preview-pane-slide-in {
+    from {
+        transform: translateX(100%);
+    }
+}
+
+/* The opening is an ornament: for anyone whose system asks for less motion, the
+   pane is simply already open. */
+@media (prefers-reduced-motion: reduce) {
+    .preview-sidebar {
+        animation: none;
     }
 }
 

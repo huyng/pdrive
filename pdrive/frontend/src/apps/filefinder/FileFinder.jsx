@@ -1399,90 +1399,90 @@ export default function FileFinder() {
                 />
             )}
 
-            {/* Header Bar */}
-            <div className="header-bar">
-                <div className="header-bar-brand">
-                    <BrandLogo />
-                    <span className="logo-mark">pdrive</span>
-                </div>
-
-                {/* the host name is centred in the bar itself, not in whatever
-                    space the logo and the buttons leave over */}
-                {hostLabel && (
-                    <span className="header-bar-host" data-tip={hostLabel}>{hostLabel}</span>
-                )}
-
-                <div className="header-bar-actions">
-                    {/* View Mode Selection Toolbar */}
-                    <div className="header-bar-button-group">
-                        <button
-                            type="button"
-                            data-tip="Display As Table"
-                            aria-label="Display As Table"
-                            aria-pressed={viewMode === 'list'}
-                            className={'header-bar-button' + (viewMode === 'list' ? ' active' : '')}
-                            onClick={() => setViewMode('list')}
-                        >
-                            <i className="material-icons">view_list</i>
-                        </button>
-                        <button
-                            type="button"
-                            data-tip="Display As Grid"
-                            aria-label="Display As Grid"
-                            aria-pressed={viewMode === 'grid'}
-                            className={'header-bar-button' + (viewMode === 'grid' ? ' active' : '')}
-                            onClick={() => setViewMode('grid')}
-                        >
-                            <i className="material-icons">grid_view</i>
-                        </button>
-                    </div>
-
-                    {/* Where the preview appears: over the listing, or beside
-                        it. Two buttons rather than one toggle so that the
-                        current choice is visible without hovering. */}
-                    <div className="header-bar-button-group">
-                        <button
-                            type="button"
-                            data-tip="Preview in a dialog"
-                            aria-label="Preview in a dialog"
-                            aria-pressed={previewMode === 'modal'}
-                            className={'header-bar-button' + (previewMode === 'modal' ? ' active' : '')}
-                            onClick={() => setPreviewMode('modal')}
-                        >
-                            <i className="material-icons">picture_in_picture</i>
-                        </button>
-                        <button
-                            type="button"
-                            data-tip="Preview in the sidebar"
-                            aria-label="Preview in the sidebar"
-                            aria-pressed={previewMode === 'sidebar'}
-                            className={'header-bar-button' + (previewMode === 'sidebar' ? ' active' : '')}
-                            onClick={() => setPreviewMode('sidebar')}
-                        >
-                            <i className="material-icons">vertical_split</i>
-                        </button>
-                    </div>
-
-                    {/* Hidden Files Toggle */}
-                    <div className="header-bar-button-group">
-                        <button
-                            type="button"
-                            data-tip={showDotfiles ? 'Hide dotfiles' : 'Show dotfiles'}
-                            aria-label={showDotfiles ? 'Hide dotfiles' : 'Show dotfiles'}
-                            aria-pressed={showDotfiles}
-                            className={'header-bar-button' + (showDotfiles ? ' active' : '')}
-                            onClick={toggleDotfiles}
-                        >
-                            <i className="material-icons">
-                                {showDotfiles ? 'visibility' : 'visibility_off'}
-                            </i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
             <div className="main-view">
                 <div className="content-view">
+                    {/* Header Bar */}
+                    <div className="header-bar">
+                        <div className="header-bar-brand">
+                            <BrandLogo />
+                            <span className="logo-mark">pdrive</span>
+                        </div>
+
+                        {/* the host name is centred in the bar itself, not in whatever
+                            space the logo and the buttons leave over */}
+                        {hostLabel && (
+                            <span className="header-bar-host" data-tip={hostLabel}>{hostLabel}</span>
+                        )}
+
+                        <div className="header-bar-actions">
+                            {/* View Mode Selection Toolbar */}
+                            <div className="header-bar-button-group">
+                                <button
+                                    type="button"
+                                    data-tip="Display As Table"
+                                    aria-label="Display As Table"
+                                    aria-pressed={viewMode === 'list'}
+                                    className={'header-bar-button' + (viewMode === 'list' ? ' active' : '')}
+                                    onClick={() => setViewMode('list')}
+                                >
+                                    <i className="material-icons">view_list</i>
+                                </button>
+                                <button
+                                    type="button"
+                                    data-tip="Display As Grid"
+                                    aria-label="Display As Grid"
+                                    aria-pressed={viewMode === 'grid'}
+                                    className={'header-bar-button' + (viewMode === 'grid' ? ' active' : '')}
+                                    onClick={() => setViewMode('grid')}
+                                >
+                                    <i className="material-icons">grid_view</i>
+                                </button>
+                            </div>
+
+                            {/* Where the preview appears: over the listing, or beside
+                                it. Two buttons rather than one toggle so that the
+                                current choice is visible without hovering. */}
+                            <div className="header-bar-button-group">
+                                <button
+                                    type="button"
+                                    data-tip="Preview in a dialog"
+                                    aria-label="Preview in a dialog"
+                                    aria-pressed={previewMode === 'modal'}
+                                    className={'header-bar-button' + (previewMode === 'modal' ? ' active' : '')}
+                                    onClick={() => setPreviewMode('modal')}
+                                >
+                                    <i className="material-icons">picture_in_picture</i>
+                                </button>
+                                <button
+                                    type="button"
+                                    data-tip="Preview in the sidebar"
+                                    aria-label="Preview in the sidebar"
+                                    aria-pressed={previewMode === 'sidebar'}
+                                    className={'header-bar-button' + (previewMode === 'sidebar' ? ' active' : '')}
+                                    onClick={() => setPreviewMode('sidebar')}
+                                >
+                                    <i className="material-icons">vertical_split</i>
+                                </button>
+                            </div>
+
+                            {/* Hidden Files Toggle */}
+                            <div className="header-bar-button-group">
+                                <button
+                                    type="button"
+                                    data-tip={showDotfiles ? 'Hide dotfiles' : 'Show dotfiles'}
+                                    aria-label={showDotfiles ? 'Hide dotfiles' : 'Show dotfiles'}
+                                    aria-pressed={showDotfiles}
+                                    className={'header-bar-button' + (showDotfiles ? ' active' : '')}
+                                    onClick={toggleDotfiles}
+                                >
+                                    <i className="material-icons">
+                                        {showDotfiles ? 'visibility' : 'visibility_off'}
+                                    </i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Sub Header Bar */}
                     <div className="toolbar-view">
                         <div className="breadcrumb-view" ref={breadcrumbRef}>

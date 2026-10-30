@@ -163,16 +163,23 @@ export default function PreviewSidebar({ open, node, onClose, onDownload, onPrev
                 onDoubleClick={() => resize(DEFAULT_WIDTH)}
                 onKeyDown={handleResizeKeyDown}
             />
-            <PreviewPanel
-                node={node}
-                barFirst
-                onClose={onClose}
-                onDownload={onDownload}
-                onPrev={onPrev}
-                onNext={onNext}
-                hasPrev={hasPrev}
-                hasNext={hasNext}
-            />
+            {/* The panel is one box that slides in, not a column of parts that
+                are readjusted as the pane opens: the box around it is what
+                changes width, and the panel keeps the width it is arriving at.
+                `overflow` is left alone here so that the picture of it still
+                sliding in is cut by the window's edge, not by its own frame. */}
+            <div className="preview-slide">
+                <PreviewPanel
+                    node={node}
+                    barFirst
+                    onClose={onClose}
+                    onDownload={onDownload}
+                    onPrev={onPrev}
+                    onNext={onNext}
+                    hasPrev={hasPrev}
+                    hasNext={hasNext}
+                />
+            </div>
         </aside>
     )
 }
