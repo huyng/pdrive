@@ -237,6 +237,21 @@ export default function FileFinder() {
         onClickCapture: handleSelectionClickCapture,
     } = useDragSelect({ selectedPaths, onSelect: handleMarqueeSelect })
 
+    // Put the selection on one path and bring its row into view. Everything that
+    // walks the listing by itself goes through here - the arrow keys and the
+    // preview's own arrows - because the selection and the eye have to move
+    // together or the walk is invisible.
+    const selectNodePath = useCallback((path) => {
+        applySelection((node) => node.path === path)
+        setLastClickedPath(path)
+        const container = selectionRef.current
+        const row = container
+            && [...container.querySelectorAll('[data-path]')]
+                .find((element) => element.getAttribute('data-path') === path)
+        // follow the cursor when it walks out of sight
+        row?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    }, [applySelection])
+
     // Every component of the current path gets its own crumb, all the way up to
     // the filesystem root, so any ancestor directory can be reached in one click.
     const pathSegments = useMemo(() => {
@@ -478,16 +493,25 @@ export default function FileFinder() {
 
     const closePreview = useCallback(() => setPreview({ open: false, node: null }), [])
 
+    // The arrows walk the same list the listing draws, and they take the
+    // selection with them: the pane and the highlight are meant to be the same
+    // file, so a chevron that moved only the pane would leave a row behind it
+    // pointing at something the pane is not showing.
     const showPreviewNeighbor = useCallback((offset) => {
-        setPreview((prev) => {
-            if (!prev.node) {
-                return prev
-            }
-            const index = previewableNodes.findIndex((node) => node.path === prev.node.path)
-            const neighbor = previewableNodes[index + offset]
-            return neighbor ? { open: true, node: neighbor } : prev
-        })
-    }, [previewableNodes])
+        const index = preview.node
+            ? previewableNodes.findIndex((node) => node.path === preview.node.path)
+            : -1
+        const neighbor = previewableNodes[index + offset]
+        if (!neighbor) {
+            return
+        }
+        setPreview({ open: true, node: neighbor })
+        // only the pane carries the selection with it: the dialog covers the
+        // listing, so there is nothing there to keep in step
+        if (previewMode === 'sidebar') {
+            selectNodePath(neighbor.path)
+        }
+    }, [preview.node, previewableNodes, previewMode, selectNodePath])
 
     const handlePreviewPrev = useCallback(() => showPreviewNeighbor(-1), [showPreviewNeighbor])
     const handlePreviewNext = useCallback(() => showPreviewNeighbor(1), [showPreviewNeighbor])
@@ -497,6 +521,34 @@ export default function FileFinder() {
             window.open(downloadUrl(preview.node.path))
         }
     }, [preview.node])
+
+    // In the pane there are two things that can move - the pane's arrows and the
+    // listing itself - and they must never disagree about which file is being
+    // shown. So the pane shows the selected file: when the selection lands on a
+    // file, the pane follows it, and when it lands on something that is not one
+    // file at all - a folder, several files, nothing - the pane closes rather
+    // than stay on a file no row is pointing at. A file no viewer claims is
+    // still a file: walking the arrows onto one keeps the pane, which says in
+    // its own words that there is no preview of it. Closing there would take the
+    // answer away at the moment it is asked for. (The dialog is a window, not a
+    // pane, and keeps its own file while the listing behind it is browsed,
+    // because none of that is visible until it closes.)
+    const paneOpen = preview.open && previewMode === 'sidebar'
+    const previewPath = preview.node ? preview.node.path : null
+    useEffect(() => {
+        if (!paneOpen) {
+            return
+        }
+        const only = selectedNodes.length === 1 ? selectedNodes[0] : null
+        if (only && only.path === previewPath) {
+            return
+        }
+        if (only && only.type === 'file') {
+            setPreview({ open: true, node: only })
+            return
+        }
+        closePreview()
+    }, [closePreview, paneOpen, previewPath, selectedNodes])
 
     // space bar previews the selected file, the way Quick Look does
     useEffect(() => {
@@ -536,7 +588,11 @@ export default function FileFinder() {
     // steps into it once it is open, left closes it, or jumps back up to the
     // folder the row sits in.
     useEffect(() => {
-        const dialogOpen = preview.open
+        // Only the dialog takes the arrows away: it covers the listing, so
+        // there is nothing behind it to walk. The pane sits beside the listing
+        // and leaves the arrows where they belong - walking the rows, with the
+        // pane following the selection it makes.
+        const dialogOpen = (preview.open && previewMode === 'modal')
             || renameDialog.visible
             || copyDialog.visible
             || newFolderDialog.visible
@@ -579,16 +635,7 @@ export default function FileFinder() {
                 index = selected ? paths.indexOf(selected.path) : -1
             }
 
-            const selectPath = (path) => {
-                applySelection((node) => node.path === path)
-                setLastClickedPath(path)
-                const container = selectionRef.current
-                const row = container
-                    && [...container.querySelectorAll('[data-path]')]
-                        .find((element) => element.getAttribute('data-path') === path)
-                // follow the cursor when it walks out of sight
-                row?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-            }
+            const selectPath = selectNodePath
 
             // the row that many places away, walking off the end means the
             // cursor stays where it is (only an empty cursor moves to the top)
@@ -670,7 +717,6 @@ export default function FileFinder() {
         document.addEventListener('keydown', handleKeyDown)
         return () => document.removeEventListener('keydown', handleKeyDown)
     }, [
-        applySelection,
         copyDialog.visible,
         expandedPaths,
         lastClickedPath,
@@ -678,8 +724,10 @@ export default function FileFinder() {
         menu.visible,
         newFolderDialog.visible,
         preview.open,
+        previewMode,
         renameDialog.visible,
         selectedNodes,
+        selectNodePath,
         sortedNodes,
         toggleExpanded,
         viewMode,
@@ -689,8 +737,18 @@ export default function FileFinder() {
         applySelection(() => false)
     }, [applySelection])
 
-    const handleAppClick = useCallback(() => {
+    // A click on the app is a click on the background - which is to say, on
+    // nothing - and nothing is what the selection becomes. The app's own parts
+    // are not nothing: the header bar's buttons, the breadcrumb trail, the
+    // preview pane and anything in a dialog are places with their own meaning,
+    // and clicking one of them must not quietly throw the selection away. (It
+    // would also close the pane, which shows the selected file.)
+    const CHROME = '.header-bar, .toolbar-view, .preview-sidebar, .modal'
+    const handleAppClick = useCallback((event) => {
         setMenu((prev) => (prev.visible ? { ...prev, visible: false } : prev))
+        if (event.target instanceof Element && event.target.closest(CHROME)) {
+            return
+        }
         clearSelection()
     }, [clearSelection])
 
