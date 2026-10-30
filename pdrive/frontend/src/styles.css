@@ -1621,6 +1621,12 @@ body.resizing-preview .preview-content {
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
+    /* Where the table ends, the scroll ends. Without this the browser's elastic
+       overscroll lets a drag past the last column pull a strip of empty panel into
+       view beside the table - which reads as a blank column in a file that has
+       none. It also keeps a scroll that reaches the bottom of the rows from
+       carrying on into the page behind. */
+    overscroll-behavior: contain;
 }
 
 .preview-csv {
@@ -1656,6 +1662,16 @@ body.resizing-preview .preview-content {
        up along the top leaves the gap at the bottom and reads as a row that has
        slipped down. */
     vertical-align: middle;
+    /* The listing switches selection off in its cells, so that a drag across them
+       picks rows instead of dragging a blue smear over the file names. A table of
+       values has no rows to pick, and its cells are the text the preview is for:
+       being able to copy a cell is half the reason to look at a table in a
+       browser. */
+    -webkit-user-select: text;
+    -khtml-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
 }
 
 .preview-csv thead th {
@@ -1719,6 +1735,10 @@ body.resizing-preview .preview-content {
     padding: 0;
     text-align: inherit;
     width: 100%;
+    /* a button is unselectable by default; its label is a column name, which is
+       worth copying as much as the cells under it */
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 .preview-csv-sort:hover .preview-csv-label {
