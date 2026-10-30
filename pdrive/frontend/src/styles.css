@@ -1042,7 +1042,8 @@ audio.preview-media {
     display: inline-block;
     font-size: 12px;
     line-height: 1.4;
-    margin: 0 0 14px;
+    /* below the text it is about, which is where the text stops */
+    margin: 14px 0 0;
     padding: 3px 9px;
 }
 
@@ -1584,6 +1585,156 @@ body.resizing-preview .preview-content {
     background: #F7F9FB;
     color: #1F2D3D;
     font-weight: 600;
+}
+
+/* -------------------------------------------------------------------------
+   A comma-separated file, drawn as the table it is. The panel holds the note and
+   the table's own scroller apart, so that the heading row sticks to the top of
+   the table rather than to the top of a padded page.
+   ------------------------------------------------------------------------- */
+
+.preview-text-panel.preview-csv-panel {
+    display: flex;
+    flex-direction: column;
+    /* the table scrolls inside the panel; the note above it does not move */
+    overflow: hidden;
+    padding: 0;
+}
+
+/* Under the table, where a spreadsheet keeps its status line: a strip, not a pill
+   over the heading row, so that the grid starts at the top of the panel and the
+   note is read when the eye has finished with the data. */
+.preview-csv-panel .preview-note {
+    background: none;
+    border: 0;
+    border-top: 1px solid #EDF1F5;
+    border-radius: 0;
+    color: #7A8B9C;
+    display: block;
+    flex: none;
+    font-size: 11.5px;
+    margin: 0;
+    padding: 6px 14px;
+}
+
+.preview-csv-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+.preview-csv {
+    /* borders are drawn by the cells: a collapsed table cannot keep the borders
+       of a heading row that is stuck to the top */
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12.5px;
+    /* numbers line up under themselves, which is the whole point of a table */
+    font-variant-numeric: tabular-nums;
+    /* The table is as wide as its columns need and not one column narrower: a
+       table squeezed into the panel hides the columns it was squeezed out of,
+       where a table that overflows scrolls and says so. */
+    min-width: 100%;
+    width: max-content;
+    /* a cell is one line: the rows of a table are compared sideways */
+    white-space: nowrap;
+}
+
+.preview-csv th,
+.preview-csv td {
+    border-bottom: 1px solid #E6EBF1;
+    border-right: 1px solid #EEF2F6;
+    /* a cell wider than this holds a paragraph, and a paragraph is what the text
+       preview is for */
+    max-width: 320px;
+    overflow: hidden;
+    padding: 5px 10px;
+    text-overflow: ellipsis;
+    vertical-align: top;
+}
+
+.preview-csv thead th {
+    background: #F7F9FB;
+    border-bottom: 1px solid #DCE3EB;
+    color: #1F2D3D;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+/* the row numbers stay where they are while the columns move under them */
+.preview-csv .preview-csv-index {
+    background: #FCFDFE;
+    color: #98A6B5;
+    font-weight: 400;
+    left: 0;
+    position: sticky;
+    text-align: right;
+    user-select: none;
+    width: 1%;
+    z-index: 1;
+}
+
+.preview-csv thead .preview-csv-index {
+    background: #F7F9FB;
+    /* above the heading cells, or its corner would slide under them */
+    z-index: 3;
+}
+
+.preview-csv tbody tr:not(.preview-csv-spacer):hover td,
+.preview-csv tbody tr:not(.preview-csv-spacer):hover .preview-csv-index {
+    background: #F5F9FD;
+}
+
+/* The rows that are not drawn, standing in for the ones that are: one empty box
+   above the window and one below it, as tall as the rows they replace. */
+.preview-csv-spacer td,
+.preview-csv-spacer:hover td {
+    background: none;
+    border: 0;
+    max-width: none;
+    padding: 0;
+}
+
+/* A heading that sorts. The whole cell is the target, so the label can be short
+   and the aim still easy; the caret says which way round the table is. */
+.preview-csv-sort {
+    align-items: center;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    font: inherit;
+    font-weight: inherit;
+    gap: 4px;
+    justify-content: inherit;
+    max-width: 100%;
+    padding: 0;
+    text-align: inherit;
+    width: 100%;
+}
+
+.preview-csv-sort:hover .preview-csv-label {
+    text-decoration: underline dotted rgba(31, 45, 61, .45);
+    text-underline-offset: 2px;
+}
+
+.preview-csv-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.preview-csv-caret {
+    color: #20A0FF;
+    /* 18px of Material icon would make the heading taller than the rows it
+       heads, so it is drawn at the size of the text around it */
+    font-size: 14px;
+    height: 14px;
+    line-height: 14px;
+    width: 14px;
 }
 
 /* The pane's bar is its header: the file, the arrows, the download and the way

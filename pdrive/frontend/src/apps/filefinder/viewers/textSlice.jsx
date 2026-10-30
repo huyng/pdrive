@@ -70,9 +70,10 @@ export function SliceMessage({ state }) {
     return <div className="preview-placeholder">This file is empty.</div>
 }
 
-// The caption above a body that is not the whole file. A document that was cut
-// has to say so before it is read, or its last paragraph reads as its last
-// paragraph.
+// The line at the end of a body that is not the whole file. A document that was cut
+// has to say so, or its last paragraph reads as its last paragraph - and it says it
+// where the text stops, under the text, rather than over the first line of a page
+// nobody has read yet.
 export function TruncationNote({ state }) {
     if (!state.truncated) {
         return null

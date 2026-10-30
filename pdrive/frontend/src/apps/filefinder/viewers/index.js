@@ -37,6 +37,7 @@
 // changes too, which lives in `utils.js` because the listing draws it.
 
 import AudioViewer from './AudioViewer.jsx'
+import CsvViewer from './CsvViewer.jsx'
 import ImageViewer from './ImageViewer.jsx'
 import MarkdownViewer from './MarkdownViewer.jsx'
 import PdfViewer from './PdfViewer.jsx'
@@ -49,6 +50,7 @@ export const VIEWERS = [
     VideoViewer,
     AudioViewer,
     MarkdownViewer,
+    CsvViewer,
     TextViewer,
 ]
 

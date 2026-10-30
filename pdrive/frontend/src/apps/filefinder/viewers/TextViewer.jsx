@@ -19,8 +19,8 @@ function TextBody({ node }) {
     }
     return (
         <>
-            <TruncationNote state={state} />
             <pre className="preview-text">{state.text}</pre>
+            <TruncationNote state={state} />
         </>
     )
 }

@@ -36,7 +36,11 @@ export function downloadUrl(path) {
     return '/download?file=' + encodeURIComponent(path)
 }
 
-const TEXT_PREVIEW_MAX_BYTES = 64 * 1024
+// Two megabytes: enough that an ordinary source file, note, config or export is
+// shown whole, and small enough that the string, the text node and the layout it
+// costs stay in the range a browser handles without a pause. It is a preview, not
+// a reader - the bar's download button is there for the rest of a big file.
+const TEXT_PREVIEW_MAX_BYTES = 2 * 1024 * 1024
 
 // Reads the beginning of a file for the text preview. A Range request is used
 // so that huge files (logs!) never get pulled into the browser in full.

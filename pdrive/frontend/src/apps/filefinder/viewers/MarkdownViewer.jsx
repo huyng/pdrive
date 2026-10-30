@@ -274,10 +274,10 @@ function MarkdownBody({ node }) {
     }
     return (
         <>
-            <TruncationNote state={state} />
             <div className="preview-markdown">
                 <Blocks blocks={blocks} path={node.path} />
             </div>
+            <TruncationNote state={state} />
         </>
     )
 }
