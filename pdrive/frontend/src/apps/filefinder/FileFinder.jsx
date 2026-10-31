@@ -32,6 +32,7 @@ import { newJobId, startJob } from '../../sdk/kernel.js'
 import { track } from '../../jobs.js'
 import useDragMove from '../../useDragMove.js'
 import useDragSelect from '../../useDragSelect.js'
+import useHistoryNav from '../../useHistoryNav.js'
 import { basename, copyToClipboard, isDotfile, sortNodes, withoutDotfiles } from '../../utils.js'
 import { viewerFor, viewersFor } from './viewers/index.js'
 
@@ -102,15 +103,13 @@ function isZipNode(node) {
     return Boolean(node) && node.type !== 'dir' && /\.zip$/i.test(node.name)
 }
 
-function writeLocationPath(path, { replace = false } = {}) {
-    const url = path
+// The location that shows a directory. A hash is used instead of a path because
+// the backend only serves index.html from "/", so the directory has to be
+// carried after the "#" where the server never looks.
+function locationForPath(path) {
+    return path
         ? PATH_HASH_PREFIX + encodeURIComponent(path)
         : window.location.pathname + window.location.search
-    if (replace) {
-        window.history.replaceState({ path }, '', url)
-    } else {
-        window.history.pushState({ path }, '', url)
-    }
 }
 
 export default function FileFinder() {
@@ -153,9 +152,15 @@ export default function FileFinder() {
     const [uploadDrag, setUploadDrag] = useState({ visible: false, target: null })
     const filePickerRef = useRef(null)
     // A short-lived message for things the browser should have told the user
-    // about but does not (a dropped folder, for instance).
+    // about but does not (a dropped folder, a folder that will not open).
     const [notice, setNotice] = useState(null)
     const noticeTimer = useRef(0)
+
+    const showNotice = useCallback((text) => {
+        setNotice(text)
+        clearTimeout(noticeTimer.current)
+        noticeTimer.current = setTimeout(() => setNotice(null), 6000)
+    }, [])
 
     const visibleNodes = useMemo(() => (
         showDotfiles ? nodes : withoutDotfiles(nodes)
@@ -417,6 +422,31 @@ export default function FileFinder() {
     // overwrite the directory the user is currently looking at.
     const navigationId = useRef(0)
 
+    // Every folder visit is an entry in the browser's history, so its own back
+    // and forward buttons, their keyboard shortcuts and the app's arrows all
+    // move through the same trail.
+    const {
+        canGoBack,
+        canGoForward,
+        push: pushLocation,
+        replace: replaceLocation,
+        goBack,
+        goForward,
+    } = useHistoryNav()
+
+    // Write the directory being shown into the location: as an entry of its own
+    // when the user went somewhere, and as a correction of the entry being shown
+    // when the URL had to be resolved (or a directory turned out to be
+    // unreadable and another one took its place).
+    const writeLocationPath = useCallback((path, { replace = false } = {}) => {
+        const url = locationForPath(path)
+        if (replace) {
+            replaceLocation({ path }, url)
+        } else {
+            pushLocation({ path }, url)
+        }
+    }, [pushLocation, replaceLocation])
+
     const loadDirectory = useCallback(async (path) => {
         const id = ++navigationId.current
         try {
@@ -431,10 +461,14 @@ export default function FileFinder() {
         } catch (err) {
             if (id === navigationId.current) {
                 console.error('could not load listing for', path, err)
+                // a folder that does not open has to say so: a crumb that is
+                // clicked and leaves the listing exactly as it was reads as a
+                // click that never happened
+                showNotice('Could not open ' + (path || 'this folder'))
             }
             return null
         }
-    }, [applyListing])
+    }, [applyListing, showNotice])
 
     // the equivalent of the old Vue component's `created` hook, plus the
     // browser history integration that powers back/forward navigation
@@ -474,14 +508,14 @@ export default function FileFinder() {
         restoreDirectory()
         window.addEventListener('popstate', handlePopState)
         return () => window.removeEventListener('popstate', handlePopState)
-    }, [loadDirectory])
+    }, [loadDirectory, writeLocationPath])
 
     const openFolder = useCallback(async (path) => {
         const data = await loadDirectory(path)
         if (data && data.cwd !== pathFromLocation()) {
             writeLocationPath(data.cwd)
         }
-    }, [loadDirectory])
+    }, [loadDirectory, writeLocationPath])
 
     // ---------------------------------------------------------------------
     // Drag to move
@@ -1235,12 +1269,6 @@ export default function FileFinder() {
         files.forEach((file) => uploadOne(file, destination, existing))
     }, [cwd, nodes, uploadOne])
 
-    const showNotice = useCallback((text) => {
-        setNotice(text)
-        clearTimeout(noticeTimer.current)
-        noticeTimer.current = setTimeout(() => setNotice(null), 6000)
-    }, [])
-
     useEffect(() => () => clearTimeout(noticeTimer.current), [])
 
     // Only a drag carrying files is ours; dragging text or a link around the
@@ -1529,14 +1557,43 @@ export default function FileFinder() {
 
                     {/* Sub Header Bar */}
                     <div className="toolbar-view">
+                        {/* Back and forward walk the browser's history, which is where
+                            every folder visit is written. They are the browser's own
+                            buttons made visible: greyed out where there is nowhere to
+                            go, as they would be in its toolbar. */}
+                        <div className="history-buttons">
+                            <button
+                                type="button"
+                                data-tip="Back"
+                                aria-label="Back"
+                                className="history-button"
+                                disabled={!canGoBack}
+                                onClick={goBack}
+                            >
+                                <i className="material-icons">arrow_back</i>
+                            </button>
+                            <button
+                                type="button"
+                                data-tip="Forward"
+                                aria-label="Forward"
+                                className="history-button"
+                                disabled={!canGoForward}
+                                onClick={goForward}
+                            >
+                                <i className="material-icons">arrow_forward</i>
+                            </button>
+                        </div>
                         <div className="breadcrumb-view" ref={breadcrumbRef}>
                             {pathSegments.map((segment, index) => (
                                 <span key={segment.path}>
                                     <span className="segment" onClick={() => handleSegmentClick(segment)}>
                                         {segment.name}
                                     </span>
-                                    {index < pathSegments.length - 1 && (
-                                        <i className="material-icons">chevron_right</i>
+                                    {/* the root is itself a slash, so a divider after it
+                                        would only repeat it: left out, the trail reads as
+                                        the absolute path it is */}
+                                    {index < pathSegments.length - 1 && segment.path !== '/' && (
+                                        <span className="crumb-divider" aria-hidden="true">/</span>
                                     )}
                                 </span>
                             ))}

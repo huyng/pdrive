@@ -48,7 +48,18 @@ class Local:
     # -----------------------------------------------------------------
 
     def listing(self, path):
-        nodes = [process(pth.join(path, name)) for name in os.listdir(path)]
+        nodes = []
+        for name in os.listdir(path):
+            try:
+                nodes.append(process(pth.join(path, name)))
+            except OSError:
+                # an entry `listdir` gave us and `stat` would not: it went away
+                # between the two calls, it is a broken symlink, or its name is
+                # one this process may not look at. The ssh backend skips those
+                # too - a whole directory is not worth failing over one entry it
+                # could not read, and the root of a macOS volume carries a
+                # `/.VolumeIcon.icns` that is often exactly such an entry.
+                continue
         return {
             "basedir": self.root,
             "cwd": path,

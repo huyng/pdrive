@@ -55,7 +55,7 @@ button {
 .header-bar-brand {
     align-items: baseline;
     display: flex;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
 }
 
@@ -75,12 +75,13 @@ button {
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    color: rgba(255, 255, 255, .7);
+    color: rgba(255, 255, 255, .8);
     font-size: 13px;
-    /* The button groups take roughly 340px on the right and the word mark
-       100px on the left, so the label may only grow to twice the shorter side
-       of that gap: it ellipsises instead of sliding under either of them. */
-    max-width: clamp(0px, calc(100% - 684px), 40vw);
+    /* The button groups take roughly 180px on the right and the word mark
+       110px on the left, so the label may only grow to the room left over once
+       the wider side of the two is cleared twice: it ellipsises instead of
+       sliding under either of them. */
+    max-width: clamp(0px, calc(100% - 380px), 40vw);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -88,11 +89,16 @@ button {
 
 /* Header bar. It sits at the top of the listing's column, so it is as wide as
    the listing is: a pane sharing the window keeps its own top edge, and there is
-   no blue strip over it. */
+   no strip of the app's colour over it.
+
+   Drawn as a window's toolbar in the app's own blue, with its controls grouped
+   into the segmented controls below: the colour is the app's, and what makes the
+   bar read as chrome rather than as a banner is that its buttons are instruments
+   on it - a groove and a chosen segment - instead of a row of little boxes. */
 
 .header-bar {
     background: #20A0FF;
-    padding: 4px 10px;
+    padding: 7px 10px;
     box-sizing: border-box;
     display: flex;
     flex: 0 0 auto;
@@ -109,32 +115,46 @@ button {
     gap: 6px;
 }
 
+/* A group of buttons is a segmented control: a groove cut into the blue, with the
+   chosen segment standing out of it in the bar's own dark navy. The track is the
+   bar darkened rather than a colour of its own, so the group sits in the bar
+   instead of on it. */
 .header-bar-button-group {
+    background: rgba(0, 0, 0, .17);
+    border-radius: 6px;
     display: flex;
-    gap: 6px;
+    padding: 2px;
 }
 
 .header-bar-button {
-    background-color: #285688F1;
-    border: 1px solid #28568821;
-    color: #9ab;
+    align-items: center;
+    background: none;
+    border: 0;
     border-radius: 4px;
+    color: rgba(255, 255, 255, .88);
     cursor: pointer;
-    padding: 5px 10px;
-    line-height: 1;
+    display: flex;
+    height: 22px;
+    justify-content: center;
+    padding: 0;
+    width: 30px;
 }
 
 .header-bar-button:hover {
-    background-color: #285688AA;
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
 }
 
+/* the raised segment, and the shadow is what raises it: a flat navy square in the
+   groove reads as a hole, not as a button that is down */
 .header-bar-button.active {
-    background-color: #28568861;
-    color: white;
+    background: #285688;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .22);
+    color: #fff;
 }
 
 .header-bar-button .material-icons {
-    font-size: 20px;
+    font-size: 18px;
     line-height: 1;
     vertical-align: middle;
 }
@@ -156,7 +176,7 @@ button {
 .btn:hover {
     background: #ECF5FF;
     border-color: #C6E2FF;
-    color: #409EFF;
+    color: #33679b;
 }
 
 .btn:focus-visible {
@@ -165,8 +185,8 @@ button {
 }
 
 .btn-primary {
-    background: #409EFF;
-    border-color: #409EFF;
+    background: #3278be;
+    border-color: #3278be;
     color: white;
 }
 
@@ -411,7 +431,11 @@ button {
     font-size: 12px;
 }
 
-/* Toolbar and breadcrumbs */
+/* Toolbar and breadcrumbs.
+
+   The path bar under the header keeps the header's dark navy, a shade deeper, so
+   the two read as one window's worth of chrome - the blue on top, the trail under
+   it - and the white of the listing starts where the trail ends. */
 
 .toolbar-view {
     background: #324057;
@@ -423,7 +447,8 @@ button {
 }
 
 .breadcrumb-view {
-    padding: 8px 10px;
+    font-size: 13px;
+    padding: 6px 10px;
     border-right: 1px solid #1F2D3D;
     flex: 1;
     /* the trail is one line and scrolls horizontally when it gets long */
@@ -441,7 +466,7 @@ button {
 .breadcrumb-view .segment {
     border-radius: 3px;
     cursor: pointer;
-    padding: 2px 4px;
+    padding: 2px 3px;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
@@ -452,8 +477,63 @@ button {
     background: rgba(255, 255, 255, .12);
 }
 
-.breadcrumb-view .material-icons {
-    vertical-align: middle;
+/* Between one name and the next. A slash is a character, not an 18px glyph that
+   has to be wide enough to point with, so each step of a deep path costs a
+   fraction of what a chevron did. It is punctuation: dimmer than the names it
+   separates, and never a click of its own. The one place it is left out is after
+   the root, whose own name is a slash. */
+.breadcrumb-view .crumb-divider {
+    color: rgba(255, 255, 255, .38);
+    margin: 0 1px;
+    pointer-events: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Back and forward, at the head of the trail. They are circles rather than
+   segments because they are not a choice between two states - each is an action,
+   and the greyed-out one is an action with nowhere to go. The hairline on their
+   right is the one the trail already draws against the New button, and it says the
+   same thing here: the buttons are not part of the path. */
+.history-buttons {
+    align-items: center;
+    /* the hairline is the bar's own height, not the height of the buttons */
+    align-self: stretch;
+    border-right: 1px solid #1F2D3D;
+    display: flex;
+    flex: none;
+    gap: 2px;
+    padding: 0 6px;
+}
+
+.history-button {
+    align-items: center;
+    background: none;
+    border: 0;
+    border-radius: 50%;
+    color: rgba(255, 255, 255, .75);
+    cursor: pointer;
+    display: flex;
+    height: 26px;
+    justify-content: center;
+    padding: 0;
+    width: 26px;
+}
+
+.history-button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, .12);
+    color: #fff;
+}
+
+.history-button:disabled {
+    color: rgba(255, 255, 255, .24);
+    cursor: default;
+}
+
+.history-button .material-icons {
+    font-size: 18px;
 }
 
 .new-button-view {
@@ -463,8 +543,9 @@ button {
 .new-button {
     /* the toolbar is only as tall as the breadcrumbs or this button, whichever
        needs more, so its own margins set the height of the whole bar */
-    margin: 3px 0 3px 16px;
-    padding: 5px 8px 5px 10px;
+    margin: 6px 0 6px 16px;
+    padding: 3px 4px 3px 8px;
+    border-radius: 14px;
 }
 
 .new-button .material-icons {
