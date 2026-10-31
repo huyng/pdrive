@@ -998,7 +998,7 @@ audio.preview-media {
    the first character is not against the border. */
 .preview-text-panel {
     background: white;
-    border-radius: 6px;
+    border-radius: 0px;
     box-sizing: border-box;
     max-height: calc(100vh - 120px);
     overflow: auto;
