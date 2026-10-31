@@ -967,8 +967,12 @@ tr.selected .file-icon {
     min-width: 0;
 }
 
+/* A stage is square in both frames: a page of text and a frame are the window's
+   own edges, and a radius that has to be undone by every host is a radius in the
+   wrong place. Only a picture or a piece of sound keeps a little rounding in the
+   dialog, where it floats over the listing; the pane squares that too. */
 .preview-media {
-    border-radius: 4px;
+    border-radius: 12px;
     display: block;
     max-height: calc(100vh - 120px);
     max-width: min(1200px, calc(100vw - 40px));
@@ -982,7 +986,6 @@ audio.preview-media {
 .preview-frame {
     background: white;
     border: 0;
-    border-radius: 4px;
     height: calc(100vh - 120px);
     width: min(1000px, calc(100vw - 40px));
 }
@@ -998,7 +1001,6 @@ audio.preview-media {
    the first character is not against the border. */
 .preview-text-panel {
     background: white;
-    border-radius: 0px;
     box-sizing: border-box;
     max-height: calc(100vh - 120px);
     overflow: auto;
@@ -1801,7 +1803,6 @@ body.resizing-preview .preview-content {
 
 .preview-sidebar .preview-text-panel,
 .preview-sidebar .preview-frame {
-    border-radius: 0;
     height: 100%;
     max-height: 100%;
     width: 100%;
